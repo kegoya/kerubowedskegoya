@@ -1,14 +1,592 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { cn } from 'cn'
+import {
+  Calendar,
+  CheckCircle2,
+  Church,
+  Clock,
+  Heart,
+  Loader2,
+  MapPin,
+  PartyPopper,
+  UtensilsCrossed,
+} from 'lucide-react'
+import type { FormEvent, ReactNode } from 'react'
+import { useEffect, useState } from 'react'
+
+import { ThemeToggle } from '#/components/theme-toggle'
+import { Button } from '#/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '#/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#/components/ui/select'
+import { Textarea } from '#/components/ui/textarea'
+import { useIsMobile } from '#/hooks/use-mobile'
+import { submitRsvp } from '#/server/rsvp'
 
 export const Route = createFileRoute('/')({ component: Home })
 
+type FormState = {
+  name: string
+  email: string
+  attending: 'yes' | 'no'
+  guests: string
+  message: string
+}
+
+const initialForm: FormState = {
+  name: '',
+  email: '',
+  attending: 'yes',
+  guests: '1',
+  message: '',
+}
+
+const attendances: {
+  value: 'yes' | 'no'
+  title: string
+  description: string
+}[] = [
+  {
+    value: 'yes',
+    title: 'Joyfully Accept',
+    description: "I'd be honored to attend",
+  },
+  {
+    value: 'no',
+    title: 'Regretfully Decline',
+    description: "Sadly, I can't make it",
+  },
+]
+
 function Home() {
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState<FormState>(initialForm)
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle')
+  const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState('')
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (nextOpen) {
+      setForm(initialForm)
+      setStatus('idle')
+      setError(null)
+      setSuccessMessage('')
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (status === 'submitting') return
+
+    setStatus('submitting')
+    setError(null)
+
+    try {
+      const response = await submitRsvp({
+        data: {
+          name: form.name,
+          email: form.email,
+          attending: form.attending,
+          guests: Number(form.guests),
+          message: form.message,
+        },
+      })
+      setSuccessMessage(response.message)
+      setStatus('success')
+    } catch (err) {
+      setStatus('error')
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Something went wrong. Please try again.',
+      )
+    }
+  }
+
   return (
-    <div className="p-8">
-      <h1 className="text-4xl font-bold">Welcome to TanStack Start</h1>
-      <p className="mt-4 text-lg">
-        Edit <code>src/routes/index.tsx</code> to get started.
+    <main className="min-h-dvh bg-background font-sans text-foreground antialiased">
+      <header className="fixed inset-x-0 top-0 z-40 flex items-center justify-end p-4 sm:p-6">
+        <ThemeToggle />
+      </header>
+
+      <Hero onRsvp={() => handleOpenChange(true)} />
+
+      <Countdown />
+
+      <Schedule />
+
+      <footer className="border-t border-border py-10 text-center text-sm text-muted-foreground">
+        <Heart className="mx-auto mb-3 size-4 fill-primary text-primary" />
+        <p className="font-serif text-lg text-foreground">
+          Elvin &amp; Eric
+        </p>
+        <p className="mt-1">December 28, 2026 · Kisii, Kenya</p>
+      </footer>
+
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          {status === 'success' ? (
+            <div className="flex flex-col items-center gap-5 py-8 text-center">
+              <span className="grid size-14 place-items-center rounded-full bg-primary/10 text-primary">
+                <CheckCircle2 className="size-8" strokeWidth={1.5} />
+              </span>
+              <DialogHeader>
+                <DialogTitle className="font-serif text-2xl">
+                  You're all set!
+                </DialogTitle>
+                <DialogDescription className="mx-auto max-w-xs leading-relaxed">
+                  {successMessage}
+                </DialogDescription>
+              </DialogHeader>
+              <Button size="lg" onClick={() => setOpen(false)}>
+                Done
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} noValidate>
+              <DialogHeader className="mb-6">
+                <DialogTitle className="font-serif text-2xl">
+                  RSVP
+                </DialogTitle>
+                <DialogDescription>
+                  Kindly respond by December 14, 2026.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="rsvp-name">Full Name</Label>
+                  <Input
+                    id="rsvp-name"
+                    required
+                    autoComplete="name"
+                    placeholder="Your full name"
+                    value={form.name}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        name: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="rsvp-email">Email Address</Label>
+                  <Input
+                    id="rsvp-email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    value={form.email}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        email: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-2.5">
+                  <Label>Attendance</Label>
+                  <RadioGroup
+                    value={form.attending}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        attending: value as 'yes' | 'no',
+                      }))
+                    }
+                  >
+                    {attendances.map((attendance) => {
+                      const selected = form.attending === attendance.value
+                      return (
+                        <label
+                          key={attendance.value}
+                          htmlFor={`attendance-${attendance.value}`}
+                          className={cn(
+                            'flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors',
+                            selected
+                              ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                              : 'border-border hover:bg-accent',
+                          )}
+                        >
+                          <RadioGroupItem
+                            id={`attendance-${attendance.value}`}
+                            value={attendance.value}
+                            className="mt-0.5"
+                          />
+                          <span className="grid gap-0.5">
+                            <span className="text-sm font-medium leading-tight">
+                              {attendance.title}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {attendance.description}
+                            </span>
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </RadioGroup>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="rsvp-guests">Guest Count</Label>
+                  <Select
+                    value={form.guests}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({ ...prev, guests: value }))
+                    }
+                  >
+                    <SelectTrigger id="rsvp-guests" className="w-full">
+                      <SelectValue placeholder="Select number of guests" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map((count) => (
+                        <SelectItem key={count} value={String(count)}>
+                          {count} {count === 1 ? 'guest' : 'guests'} (inc.
+                          yourself)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="rsvp-message" className="items-baseline gap-1">
+                    Personal Note
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Textarea
+                    id="rsvp-message"
+                    rows={4}
+                    placeholder="Share a note, well wishes, or dietary requirements..."
+                    value={form.message}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        message: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                {error && (
+                  <p
+                    role="alert"
+                    className="text-sm text-destructive"
+                  >
+                    {error}
+                  </p>
+                )}
+              </div>
+
+              <DialogFooter className="mt-6 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={status === 'submitting'}
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={status === 'submitting'}>
+                  {status === 'submitting' ? (
+                    <>
+                      <Loader2 className="animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    'Send RSVP'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </main>
+  )
+}
+
+const divider = (
+  <div className="flex items-center gap-4">
+    <span className="h-px w-12 bg-border sm:w-20" />
+    <Heart className="size-4 fill-primary text-primary" />
+    <span className="h-px w-12 bg-border sm:w-20" />
+  </div>
+)
+
+function Hero({ onRsvp }: { onRsvp: () => void }) {
+  const isMobile = useIsMobile()
+
+  return (
+    <section className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-24 text-center">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 -right-40 size-[28rem] rounded-full border border-primary/10"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-48 -left-48 size-[32rem] rounded-full border border-secondary/10"
+      />
+
+      <p className="text-xs font-semibold tracking-[0.35em] text-secondary uppercase">
+        Together with their families
       </p>
-    </div>
+
+      <h1
+        className={cn(
+          'mt-6 font-serif leading-none tracking-tight text-foreground whitespace-nowrap',
+          isMobile ? 'text-4xl' : 'text-7xl md:text-8xl',
+        )}
+      >
+        Elvin <span className="text-primary italic">&amp;</span> Eric
+      </h1>
+
+      <div className="mt-8">{divider}</div>
+
+      <p className="mt-8 text-sm font-semibold tracking-[0.25em] text-muted-foreground uppercase">
+        Request the pleasure of your company
+      </p>
+
+      <p className="mt-4 flex items-center gap-2 text-lg text-foreground">
+        <Calendar className="size-5 text-primary" strokeWidth={1.75} />
+        December 28, 2026
+      </p>
+      <p className="mt-2 flex items-center gap-2 text-muted-foreground">
+        <MapPin className="size-5 text-primary" strokeWidth={1.75} />
+        Kisii, Kenya
+      </p>
+
+      <Button
+        size="lg"
+        className="mt-10 h-12 rounded-full px-10 text-base shadow-lg"
+        onClick={onRsvp}
+      >
+        <Heart className="fill-current" />
+        RSVP Now
+      </Button>
+
+      <p className="mt-10 text-xs uppercase tracking-[0.2em] text-muted-foreground">Scroll to see the celebration</p>
+    </section>
+  )
+}
+
+const TARGET_DATE = new Date('2026-12-28T10:00:00+03:00')
+
+type TimeLeft = {
+  days: number
+  hours: number
+  minutes: number
+  seconds: number
+}
+
+function getTimeLeft(target: Date = TARGET_DATE): TimeLeft {
+  const totalSeconds = Math.max(0, Math.floor((target.getTime() - Date.now()) / 1000))
+  return {
+    days: Math.floor(totalSeconds / 86400),
+    hours: Math.floor((totalSeconds % 86400) / 3600),
+    minutes: Math.floor((totalSeconds % 3600) / 60),
+    seconds: totalSeconds % 60,
+  }
+}
+
+const countdownUnits: { label: string; key: keyof TimeLeft }[] = [
+  { label: 'Days', key: 'days' },
+  { label: 'Hours', key: 'hours' },
+  { label: 'Minutes', key: 'minutes' },
+  { label: 'Seconds', key: 'seconds' },
+]
+
+function Countdown() {
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => getTimeLeft())
+
+  useEffect(() => {
+    const timer = setInterval(() => setTimeLeft(getTimeLeft()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  return (
+    <section className="mx-auto max-w-4xl px-6 pb-10 sm:pb-12">
+      <div className="text-center">
+        <p className="text-xs font-semibold tracking-[0.35em] text-secondary uppercase">
+          Counting down
+        </p>
+        <h2 className="mt-4 font-serif text-4xl tracking-tight sm:text-5xl">
+          Until we say I do
+        </h2>
+        <div className="mt-6">{divider}</div>
+      </div>
+
+      <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {countdownUnits.map((unit) => (
+          <div
+            key={unit.key}
+            className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm"
+          >
+            <p className="font-serif text-5xl font-semibold tabular-nums text-primary sm:text-6xl">
+              {String(timeLeft[unit.key]).padStart(2, '0')}
+            </p>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-secondary ">
+              {unit.label}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+type ScheduleItem = {
+  accent: 'burgundy' | 'navy'
+  icon: ReactNode
+  label: string
+  title: string
+  time: string
+  location: string
+  description: string
+}
+
+const schedule: ScheduleItem[] = [
+  {
+    accent: 'burgundy',
+    icon: <Church className="size-6" strokeWidth={1.75} />,
+    label: 'Wedding Ceremony',
+    title: 'Church Ceremony',
+    time: '10:00 AM – 12:30 PM',
+    location: 'Nyanchwa SDA Church',
+    description:
+      'Please arrive at least 30 minutes early to be seated. An intimate, sacred celebration of love before close family and friends.',
+  },
+  {
+    accent: 'navy',
+    icon: <UtensilsCrossed className="size-6" strokeWidth={1.75} />,
+    label: 'Reception',
+    title: 'Reception & Celebration',
+    time: '1:00 PM Onwards',
+    location: 'Kisii National Polytechnic Grounds',
+    description:
+      'Join us for lunch, heartfelt toasts, and dancing as we kick off the festivities. The celebration continues well into the evening.',
+  },
+]
+
+const accentStyles = {
+  burgundy: {
+    badge: 'bg-primary/10 text-primary',
+    pill: 'bg-primary/5 text-primary border-primary/20',
+    line: 'bg-primary',
+  },
+  navy: {
+    badge: 'bg-secondary/10 text-secondary',
+    pill: 'bg-secondary/5 text-secondary border-secondary/20',
+    line: 'bg-secondary',
+  },
+} as const
+
+function Schedule() {
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+      <div className="text-center">
+        <p className="text-xs font-semibold tracking-[0.35em] text-secondary uppercase">
+          Save the date
+        </p>
+        <h2 className="mt-4 font-serif text-4xl tracking-tight sm:text-5xl">
+          The Celebration
+        </h2>
+        <div className="mt-6">{divider}</div>
+      </div>
+
+      <div className="mt-16 grid items-stretch gap-6 md:grid-cols-2">
+        {schedule.map((item) => {
+          const styles = accentStyles[item.accent]
+          return (
+            <article
+              key={item.title}
+              className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-sm transition-shadow hover:shadow-md"
+            >
+              <div className="flex items-start justify-between">
+                <span
+                  className={cn(
+                    'grid size-12 place-items-center rounded-full',
+                    styles.badge,
+                  )}
+                >
+                  {item.icon}
+                </span>
+                <span
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-xs font-semibold tracking-wide uppercase',
+                    styles.pill,
+                  )}
+                >
+                  {item.label}
+                </span>
+              </div>
+
+              <h3 className="mt-6 font-serif text-2xl">{item.title}</h3>
+
+              <div className="mt-4 grid gap-2 text-sm text-muted-foreground">
+                <p className="flex items-center gap-2.5">
+                  <Clock className="size-4 shrink-0 text-primary" />
+                  {item.time}
+                </p>
+                <p className="flex items-center gap-2.5">
+                  <MapPin className="size-4 shrink-0 text-primary" />
+                  {item.location}
+                </p>
+                <p className="flex items-center gap-2.5">
+                  <Calendar className="size-4 shrink-0 text-primary" />
+                  Monday, December 28, 2026
+                </p>
+              </div>
+
+              <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
+                {item.description}
+              </p>
+
+              <span
+                aria-hidden
+                className={cn(
+                  'absolute inset-x-0 bottom-0 h-1',
+                  styles.line,
+                )}
+              />
+            </article>
+          )
+        })}
+      </div>
+
+<div className="mt-12 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <PartyPopper className="size-4 text-primary" />
+        <p>
+          Ceremony kicks off at 10:00 AM at{' '}
+          <span className="font-medium text-foreground">Nyanchwa SDA Church</span>,
+          then onward to the reception.
+        </p>
+      </div>
+    </section>
   )
 }
