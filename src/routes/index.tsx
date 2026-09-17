@@ -11,7 +11,7 @@ import {
 	PartyPopper,
 	UtensilsCrossed,
 } from "lucide-react";
-import type { FormEvent, ReactNode } from "react";
+import type { CSSProperties, FormEvent } from "react";
 import { useEffect, useState } from "react";
 
 import { ThemeToggle } from "#/components/theme-toggle";
@@ -29,8 +29,26 @@ import {
 import { Textarea } from "#/components/ui/textarea";
 import { useIsMobile } from "#/hooks/use-mobile";
 import { submitRsvp } from "#/server/rsvp";
+import {
+	DEFAULT_SITE_SETTINGS,
+	getSiteSettings,
+	type SiteSettings,
+} from "#/server/site";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/")({
+	loader: async () => ({ settings: await getSiteSettings() }),
+	head: ({ loaderData }) => {
+		const settings = loaderData?.settings ?? DEFAULT_SITE_SETTINGS;
+		return {
+			meta: [
+				{ title: settings.siteTitle },
+				{ name: "description", content: settings.siteDescription },
+			],
+			links: [{ rel: "icon", href: settings.favicon || "/icon.png" }],
+		};
+	},
+	component: Home,
+});
 
 type FormState = {
 	name: string;
@@ -65,7 +83,19 @@ const attendances: {
 	},
 ];
 
+function accentStyle(settings: SiteSettings): CSSProperties {
+	return {
+		...(settings.primaryColor
+			? { "--primary": settings.primaryColor, "--ring": settings.primaryColor }
+			: {}),
+		...(settings.secondaryColor
+			? { "--secondary": settings.secondaryColor }
+			: {}),
+	} as CSSProperties;
+}
+
 function Home() {
+	const { settings } = Route.useLoaderData();
 	const [form, setForm] = useState<FormState>(initialForm);
 	const [status, setStatus] = useState<
 		"idle" | "submitting" | "success" | "error"
@@ -113,18 +143,26 @@ function Home() {
 	}
 
 	return (
-		<main className="min-h-dvh bg-background font-sans text-foreground antialiased">
-			<header className="fixed inset-x-0 top-0 z-40 flex items-center justify-end p-4 sm:p-6">
+		<main
+			className="min-h-dvh bg-background font-sans text-foreground antialiased"
+			style={accentStyle(settings)}
+		>
+			<header className="fixed inset-x-0 top-0 z-40 flex items-center justify-end p-2 sm:p-6">
 				<ThemeToggle />
 			</header>
 
-			<Hero onRsvp={handleViewRsvp} onViewProgramme={handleViewProgramme} />
+			<Hero
+				settings={settings}
+				onRsvp={handleViewRsvp}
+				onViewProgramme={handleViewProgramme}
+			/>
 
-			<Countdown />
+			<Countdown settings={settings} />
 
-			<Schedule />
+			<Schedule settings={settings} />
 
 			<RsvpSection
+				settings={settings}
 				form={form}
 				setForm={setForm}
 				status={status}
@@ -137,10 +175,14 @@ function Home() {
 				}}
 			/>
 
-			<footer className="border-t border-border py-10 text-center text-sm text-muted-foreground">
+			<footer className="border-t border-border py-5 text-center text-sm text-muted-foreground">
 				<Heart className="mx-auto mb-3 size-4 fill-primary text-primary" />
-				<p className="font-serif text-lg text-foreground">Elvin &amp; Eric</p>
-				<p className="mt-1">December 28, 2026 · Kisii, Kenya</p>
+				<p className="font-serif text-lg text-foreground">
+					{settings.partnerA} &amp; {settings.partnerB}
+				</p>
+				<p className="mt-1">
+					{settings.dateLabel} · {settings.location}
+				</p>
 			</footer>
 		</main>
 	);
@@ -155,6 +197,7 @@ const divider = (
 );
 
 function RsvpSection({
+	settings,
 	form,
 	setForm,
 	status,
@@ -163,6 +206,7 @@ function RsvpSection({
 	onSubmit,
 	onReset,
 }: {
+	settings: SiteSettings;
 	form: FormState;
 	setForm: React.Dispatch<React.SetStateAction<FormState>>;
 	status: "idle" | "submitting" | "success" | "error";
@@ -174,20 +218,20 @@ function RsvpSection({
 	return (
 		<section
 			id="rsvp"
-			className="mx-auto max-w-xl scroll-mt-24 px-6 py-12 sm:py-16"
+			className="mx-auto max-w-xl scroll-mt-24 px-3 py-6 sm:py-16"
 		>
 			<div className="text-center">
 				<p className="text-xs font-semibold tracking-[0.35em] text-secondary uppercase">
-					Kindly respond by December 14, 2026
+					Kindly respond by {settings.rsvpDeadline}
 				</p>
-				<h2 className="mt-4 font-serif text-4xl tracking-tight sm:text-5xl">
+				<h2 className="mt-2 font-serif text-4xl tracking-tight sm:text-5xl">
 					RSVP
 				</h2>
-				<div className="mt-6">{divider}</div>
+				<div className="mt-3">{divider}</div>
 			</div>
 
 			{status === "success" ? (
-				<div className="mt-12 flex flex-col items-center gap-5 rounded-2xl border border-border bg-card p-10 text-center shadow-sm">
+				<div className="mt-6 flex flex-col items-center gap-5 rounded-2xl border border-border bg-card p-5 text-center shadow-sm">
 					<span className="grid size-14 place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg">
 						<CheckCircle2 className="size-8" strokeWidth={1.5} />
 					</span>
@@ -200,7 +244,7 @@ function RsvpSection({
 					</Button>
 				</div>
 			) : (
-				<form onSubmit={onSubmit} noValidate className="mt-12 grid gap-4">
+				<form onSubmit={onSubmit} noValidate className="mt-6 grid gap-2">
 					<div className="grid gap-2">
 						<Label htmlFor="rsvp-name">Full Name</Label>
 						<Input
@@ -254,7 +298,7 @@ function RsvpSection({
 										key={attendance.value}
 										htmlFor={`attendance-${attendance.value}`}
 										className={cn(
-											"flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+											"flex cursor-pointer items-start gap-3 rounded-lg border p-1.5 transition-colors",
 											selected
 												? "border-primary bg-primary/5 ring-1 ring-primary/30"
 												: "border-border hover:bg-accent",
@@ -349,24 +393,27 @@ function RsvpSection({
 }
 
 function Hero({
+	settings,
 	onRsvp,
 	onViewProgramme,
 }: {
+	settings: SiteSettings;
 	onRsvp: () => void;
 	onViewProgramme: () => void;
 }) {
 	const isMobile = useIsMobile();
+	const heroImage = settings.heroImage || DEFAULT_SITE_SETTINGS.heroImage;
 
 	return (
-		<section className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-12 text-center">
+		<section className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-6 text-center">
 			<img
-				src="/main.png"
+				src={heroImage}
 				alt=""
 				aria-hidden
 				className="pointer-events-none absolute inset-0 z-0 h-full w-full scale-110 object-cover blur-lg"
 			/>
 			<img
-				src="/main.png"
+				src={heroImage}
 				alt=""
 				aria-hidden
 				className="pointer-events-none absolute inset-0 z-[1] h-full w-full object-contain"
@@ -389,35 +436,39 @@ function Hero({
 
 			<div className="relative z-20 flex flex-col items-center">
 				<p className="text-xs font-semibold tracking-[0.35em] text-secondary uppercase">
-					Together with their families
+					{settings.introTagline}
 				</p>
 
 				<h1
 					className={cn(
-						"mt-6 font-serif leading-none tracking-tight text-primary whitespace-nowrap",
-						isMobile ? "text-4xl" : "text-7xl md:text-8xl",
+						"mt-3 font-serif leading-none tracking-tight text-primary",
+						isMobile
+							? "text-5xl text-balance"
+							: "text-7xl whitespace-nowrap md:text-8xl",
 					)}
 				>
-					Elvin <span className="text-secondary italic">&amp;</span> Eric
+					{settings.partnerA}{" "}
+					<span className="text-secondary italic">&amp;</span>{" "}
+					{settings.partnerB}
 				</h1>
 
-				<div className="mt-8">{divider}</div>
+				<div className="mt-4">{divider}</div>
 
-				<p className="mt-8 text-sm font-semibold tracking-[0.25em] text-muted-foreground uppercase">
-					Request the pleasure of your company
+				<p className="mt-4 text-sm font-semibold tracking-[0.25em] text-muted-foreground uppercase">
+					{settings.introSubtitle}
 				</p>
 
-				<p className="mt-6 font-serif text-5xl font-bold text-secondary sm:text-6xl">
-					December 28, 2026
+				<p className="mt-3 font-serif text-5xl font-bold text-secondary sm:text-6xl">
+					{settings.dateLabel}
 				</p>
-				<p className="mt-4 flex items-center gap-2 text-muted-foreground">
+				<p className="mt-2 flex items-center gap-2 text-muted-foreground">
 					<MapPin className="size-5 text-primary" strokeWidth={1.75} />
-					Kisii, Kenya
+					{settings.location}
 				</p>
 
 				<Button
 					size="lg"
-					className="mt-10 h-12 rounded-full px-10 text-base shadow-lg"
+					className="mt-5 h-12 rounded-full px-10 text-base shadow-lg"
 					onClick={onRsvp}
 				>
 					<Heart className="fill-current" />
@@ -427,21 +478,19 @@ function Hero({
 				<Button
 					variant="secondary"
 					size="lg"
-					className="mt-4 h-12 rounded-full px-10 text-base shadow-lg"
+					className="mt-2 h-12 rounded-full px-10 text-base shadow-lg"
 					onClick={onViewProgramme}
 				>
 					VIEW PROGRAMME
 				</Button>
 
-				<p className="mt-10 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+				<p className="mt-5 text-xs uppercase tracking-[0.2em] text-muted-foreground">
 					Scroll to see the celebration
 				</p>
 			</div>
 		</section>
 	);
 }
-
-const TARGET_DATE = new Date("2026-12-28T10:00:00+03:00");
 
 type TimeLeft = {
 	days: number;
@@ -450,7 +499,7 @@ type TimeLeft = {
 	seconds: number;
 };
 
-function getTimeLeft(target: Date = TARGET_DATE): TimeLeft {
+function getTimeLeft(target: Date = new Date()): TimeLeft {
 	const totalSeconds = Math.max(
 		0,
 		Math.floor((target.getTime() - Date.now()) / 1000),
@@ -470,31 +519,32 @@ const countdownUnits: { label: string; key: keyof TimeLeft }[] = [
 	{ label: "Seconds", key: "seconds" },
 ];
 
-function Countdown() {
-	const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => getTimeLeft());
+function Countdown({ settings }: { settings: SiteSettings }) {
+	const target = new Date(settings.countdownTarget);
+	const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => getTimeLeft(target));
 
 	useEffect(() => {
-		const timer = setInterval(() => setTimeLeft(getTimeLeft()), 1000);
+		const timer = setInterval(() => setTimeLeft(getTimeLeft(target)), 1000);
 		return () => clearInterval(timer);
-	}, []);
+	}, [target]);
 
 	return (
-		<section className="mx-auto max-w-4xl px-6 pb-5 sm:pb-6">
+		<section className="mx-auto max-w-4xl px-3 pb-2.5 sm:pb-6">
 			<div className="text-center">
 				<p className="text-xs font-semibold tracking-[0.35em] text-secondary uppercase">
 					Counting down
 				</p>
-				<h2 className="mt-4 font-serif text-4xl tracking-tight sm:text-5xl">
+				<h2 className="mt-2 font-serif text-4xl tracking-tight sm:text-5xl">
 					Until we say I do
 				</h2>
-				<div className="mt-6">{divider}</div>
+				<div className="mt-3">{divider}</div>
 			</div>
 
-			<div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
+			<div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
 				{countdownUnits.map((unit) => (
 					<div
 						key={unit.key}
-						className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 text-center shadow-sm"
+						className="relative overflow-hidden rounded-2xl border border-border bg-card p-3 text-center shadow-sm"
 					>
 						<span
 							aria-hidden
@@ -513,38 +563,10 @@ function Countdown() {
 	);
 }
 
-type ScheduleItem = {
-	accent: "burgundy" | "navy";
-	icon: ReactNode;
-	label: string;
-	title: string;
-	time: string;
-	location: string;
-	description: string;
-};
-
-const schedule: ScheduleItem[] = [
-	{
-		accent: "burgundy",
-		icon: <Church className="size-6" strokeWidth={1.75} />,
-		label: "Wedding Ceremony",
-		title: "Church Ceremony",
-		time: "10:00 AM – 12:30 PM",
-		location: "Nyanchwa SDA Church",
-		description:
-			"Please arrive at least 30 minutes early to be seated. An intimate, sacred celebration of love before close family and friends.",
-	},
-	{
-		accent: "navy",
-		icon: <UtensilsCrossed className="size-6" strokeWidth={1.75} />,
-		label: "Reception",
-		title: "Reception & Celebration",
-		time: "1:00 PM Onwards",
-		location: "Kisii National Polytechnic Grounds",
-		description:
-			"Join us for lunch, heartfelt toasts, and dancing as we kick off the festivities. The celebration continues well into the evening.",
-	},
-];
+const scheduleIcons = {
+	church: Church,
+	food: UtensilsCrossed,
+} as const;
 
 const accentStyles = {
 	burgundy: {
@@ -559,26 +581,38 @@ const accentStyles = {
 	},
 } as const;
 
-function Schedule() {
+function weddingDate(target: string, dateLabel: string) {
+	try {
+		const weekday = new Date(target).toLocaleDateString("en-US", {
+			weekday: "long",
+		});
+		return `${weekday}, ${dateLabel}`;
+	} catch {
+		return dateLabel;
+	}
+}
+
+function Schedule({ settings }: { settings: SiteSettings }) {
 	return (
-		<section id="programme" className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
+		<section id="programme" className="mx-auto max-w-6xl px-3 py-6 sm:py-16">
 			<div className="text-center">
 				<p className="text-xs font-semibold tracking-[0.35em] text-secondary uppercase">
 					Programme
 				</p>
-				<h1 className="mt-4 font-serif text-4xl tracking-tight sm:text-5xl">
+				<h1 className="mt-2 font-serif text-4xl tracking-tight sm:text-5xl">
 					Order of events
 				</h1>
-				<div className="mt-6">{divider}</div>
+				<div className="mt-3">{divider}</div>
 			</div>
 
-			<div className="mt-16 grid items-stretch gap-6 md:grid-cols-2">
-				{schedule.map((item) => {
-					const styles = accentStyles[item.accent];
+			<div className="mt-8 grid items-stretch gap-3 md:grid-cols-2">
+				{settings.schedule.map((item, index) => {
+					const styles = accentStyles[index % 2 === 0 ? "burgundy" : "navy"];
+					const Icon = scheduleIcons[item.icon];
 					return (
 						<article
-							key={item.title}
-							className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-sm transition-shadow hover:shadow-md"
+							key={`${item.label}-${item.time}-${item.location}`}
+							className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
 						>
 							<div className="flex items-start justify-between">
 								<span
@@ -587,7 +621,7 @@ function Schedule() {
 										styles.badge,
 									)}
 								>
-									{item.icon}
+									<Icon className="size-6" strokeWidth={1.75} />
 								</span>
 								<span
 									className={cn(
@@ -599,9 +633,9 @@ function Schedule() {
 								</span>
 							</div>
 
-							<h3 className="mt-6 font-serif text-2xl">{item.title}</h3>
+							<h3 className="mt-3 font-serif text-2xl">{item.title}</h3>
 
-							<div className="mt-4 grid gap-2 text-sm text-muted-foreground">
+							<div className="mt-2 grid gap-2 text-sm text-muted-foreground">
 								<p className="flex items-center gap-2.5">
 									<Clock className="size-4 shrink-0 text-primary" />
 									{item.time}
@@ -612,11 +646,11 @@ function Schedule() {
 								</p>
 								<p className="flex items-center gap-2.5">
 									<Calendar className="size-4 shrink-0 text-primary" />
-									Monday, December 28, 2026
+									{weddingDate(settings.countdownTarget, settings.dateLabel)}
 								</p>
 							</div>
 
-							<p className="mt-5 text-sm leading-relaxed text-muted-foreground">
+							<p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
 								{item.description}
 							</p>
 
@@ -629,14 +663,15 @@ function Schedule() {
 				})}
 			</div>
 
-			<div className="mt-12 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+			<div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
 				<PartyPopper className="size-4 text-primary" />
 				<p>
-					Ceremony kicks off at 10:00 AM at{" "}
+					{settings.schedule[0]?.label ?? "Celebrations"} start at{" "}
+					{settings.schedule[0]?.time} at{" "}
 					<span className="font-medium text-foreground">
-						Nyanchwa SDA Church
+						{settings.schedule[0]?.location}
 					</span>
-					, then onward to the reception.
+					.
 				</p>
 			</div>
 		</section>

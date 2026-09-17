@@ -1,40 +1,180 @@
-import { createServerFn } from "@tanstack/react-start";
-import { desc, eq } from "drizzle-orm";
+import {
+	createHash,
+	randomBytes,
+	scryptSync,
+	timingSafeEqual,
+} from "node:crypto";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
+import {
+	deleteCookie,
+	getCookie,
+	setCookie,
+} from "@tanstack/react-start/server";
+import { desc, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "../db";
-import { rsvps, settings } from "../db/schema";
+import { rsvps, sessions, settings } from "../db/schema";
 
 const PASSWORD_KEY = "admin_password";
 
-async function getAdminPassword() {
+const SESSION_COOKIE = "wedding_admin_session";
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
+
+// Fixed salt used only to verify the env-var fallback password deterministically.
+const ENV_PASSWORD_SALT = createHash("sha256")
+	.update("wedding-invitation:admin-env-salt")
+	.digest("hex")
+	.slice(0, 32);
+
+const sessionCookieOptions = {
+	httpOnly: true,
+	sameSite: "lax",
+	path: "/",
+	secure: process.env.NODE_ENV === "production",
+	maxAge: SESSION_TTL_SECONDS,
+} as const;
+
+function hashPassword(
+	password: string,
+	salt = randomBytes(16).toString("hex"),
+) {
+	const key = scryptSync(password, salt, 64);
+	return `${salt}:${key.toString("hex")}`;
+}
+
+function safeEqual(a: string, b: string) {
+	const left = Buffer.from(a);
+	const right = Buffer.from(b);
+	return left.length === right.length && timingSafeEqual(left, right);
+}
+
+function verifyPassword(input: string, stored: string) {
+	const separator = stored.indexOf(":");
+	if (separator > 0) {
+		const salt = stored.slice(0, separator);
+		const expected = stored.slice(separator + 1);
+		return safeEqual(expected, hashPassword(input, salt).split(":")[1] ?? "");
+	}
+	// Legacy plaintext value stored before password hashing was introduced.
+	return safeEqual(input, stored);
+}
+
+async function getStoredPassword() {
 	const row = await db
 		.select({ value: settings.value })
 		.from(settings)
 		.where(eq(settings.key, PASSWORD_KEY))
 		.get();
-
-	const stored = row?.value;
-	if (stored) return stored;
-
-	const envPassword = process.env.ADMIN_PASSWORD;
-	if (envPassword) return envPassword;
-
-	throw new Error("Admin is not configured. Set ADMIN_PASSWORD.");
+	return row?.value ?? null;
 }
 
-export const listRsvps = createServerFn({ method: "POST" })
-	.validator(
-		z.object({
-			password: z.string().min(1),
-		}),
-	)
-	.handler(async ({ data }) => {
-		const adminPassword = await getAdminPassword();
+type PasswordMatch = {
+	ok: boolean;
+	// True when the password was verified against a legacy plaintext DB value
+	// that should be upgraded to a hash.
+	shouldMigrate: boolean;
+};
 
-		if (data.password !== adminPassword) {
+async function passwordMatches(input: string): Promise<PasswordMatch> {
+	const stored = await getStoredPassword();
+	if (stored) {
+		const ok = verifyPassword(input, stored);
+		return { ok, shouldMigrate: ok && !stored.includes(":") };
+	}
+
+	const envPassword = process.env.ADMIN_PASSWORD;
+	if (!envPassword) {
+		throw new Error("Admin is not configured. Set ADMIN_PASSWORD.");
+	}
+	return {
+		ok: verifyPassword(input, hashPassword(envPassword, ENV_PASSWORD_SALT)),
+		shouldMigrate: false,
+	};
+}
+
+async function upsertPassword(value: string) {
+	await db
+		.insert(settings)
+		.values({ key: PASSWORD_KEY, value })
+		.onConflictDoUpdate({ target: settings.key, set: { value } });
+}
+
+async function createSession() {
+	const token = randomBytes(32).toString("base64url");
+	await db.insert(sessions).values({
+		token,
+		expiresAt: new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString(),
+	});
+	setCookie(SESSION_COOKIE, token, sessionCookieOptions);
+}
+
+async function currentSessionToken() {
+	const token = getCookie(SESSION_COOKIE);
+	if (!token) return null;
+
+	const row = await db
+		.select({ expiresAt: sessions.expiresAt })
+		.from(sessions)
+		.where(eq(sessions.token, token))
+		.get();
+
+	if (!row) return null;
+	if (Date.parse(row.expiresAt) <= Date.now()) {
+		await db.delete(sessions).where(eq(sessions.token, token));
+		return null;
+	}
+	return token;
+}
+
+export const requireAuth = createServerOnlyFn(async () => {
+	const token = await currentSessionToken();
+	if (!token) {
+		throw new Error("You must be signed in.");
+	}
+	return token;
+});
+
+async function destroySession() {
+	const token = getCookie(SESSION_COOKIE);
+	if (token) {
+		await db.delete(sessions).where(eq(sessions.token, token));
+	}
+	deleteCookie(SESSION_COOKIE, sessionCookieOptions);
+}
+
+export const getAuthStatus = createServerFn({ method: "GET" }).handler(
+	async () => {
+		return { authed: Boolean(await currentSessionToken()) };
+	},
+);
+
+const loginSchema = z.object({
+	password: z.string().min(1, "Please enter the admin password"),
+});
+
+export const login = createServerFn({ method: "POST" })
+	.validator(loginSchema)
+	.handler(async ({ data }) => {
+		const { ok, shouldMigrate } = await passwordMatches(data.password);
+		if (!ok) {
 			throw new Error("Incorrect password.");
 		}
+		if (shouldMigrate) {
+			await upsertPassword(hashPassword(data.password));
+		}
+		await createSession();
+		return { success: true };
+	});
+
+export const logout = createServerFn({ method: "POST" }).handler(async () => {
+	await destroySession();
+	return { success: true };
+});
+
+export const listRsvps = createServerFn({ method: "POST" }).handler(
+	async () => {
+		await requireAuth();
 
 		return db
 			.select({
@@ -48,7 +188,8 @@ export const listRsvps = createServerFn({ method: "POST" })
 			})
 			.from(rsvps)
 			.orderBy(desc(rsvps.createdAt));
-	});
+	},
+);
 
 const changePasswordSchema = z.object({
 	currentPassword: z.string().min(1),
@@ -58,19 +199,17 @@ const changePasswordSchema = z.object({
 export const changePassword = createServerFn({ method: "POST" })
 	.validator(changePasswordSchema)
 	.handler(async ({ data }) => {
-		const adminPassword = await getAdminPassword();
+		const token = await requireAuth();
 
-		if (data.currentPassword !== adminPassword) {
+		const { ok } = await passwordMatches(data.currentPassword);
+		if (!ok) {
 			throw new Error("Current password is incorrect.");
 		}
 
-		await db
-			.insert(settings)
-			.values({ key: PASSWORD_KEY, value: data.newPassword })
-			.onConflictDoUpdate({
-				target: settings.key,
-				set: { value: data.newPassword },
-			});
+		await upsertPassword(hashPassword(data.newPassword));
+
+		// Revoke all other sessions; keep the current one signed in.
+		await db.delete(sessions).where(ne(sessions.token, token));
 
 		return { success: true };
 	});

@@ -17,3 +17,11 @@ export const settings = sqliteTable("settings", {
 	key: text("key").primaryKey(),
 	value: text("value").notNull(),
 });
+
+export const sessions = sqliteTable("sessions", {
+	token: text("token").primaryKey(),
+	createdAt: text("created_at")
+		.notNull()
+		.default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+	expiresAt: text("expires_at").notNull(),
+});
