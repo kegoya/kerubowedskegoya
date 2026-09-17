@@ -405,7 +405,7 @@ function Hero({
 	const heroImage = settings.heroImage || DEFAULT_SITE_SETTINGS.heroImage;
 
 	return (
-		<section className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-6 text-center">
+		<section className="relative flex min-h-dvh flex-col items-center overflow-hidden px-4 pt-24 pb-14 text-center sm:justify-center sm:pt-0 sm:pb-0">
 			<img
 				src={heroImage}
 				alt=""
