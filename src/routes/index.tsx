@@ -12,7 +12,7 @@ import {
 	UtensilsCrossed,
 } from "lucide-react";
 import type { CSSProperties, FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ThemeToggle } from "#/components/theme-toggle";
 import { Button } from "#/components/ui/button";
@@ -27,7 +27,6 @@ import {
 	SelectValue,
 } from "#/components/ui/select";
 import { Textarea } from "#/components/ui/textarea";
-import { useIsMobile } from "#/hooks/use-mobile";
 import { submitRsvp } from "#/server/rsvp";
 import {
 	DEFAULT_SITE_SETTINGS,
@@ -39,10 +38,19 @@ export const Route = createFileRoute("/")({
 	loader: async () => ({ settings: await getSiteSettings() }),
 	head: ({ loaderData }) => {
 		const settings = loaderData?.settings ?? DEFAULT_SITE_SETTINGS;
+		const heroImage = absoluteUrl(
+			settings.heroImage || DEFAULT_SITE_SETTINGS.heroImage,
+		);
 		return {
 			meta: [
 				{ title: settings.siteTitle },
 				{ name: "description", content: settings.siteDescription },
+				{ property: "og:title", content: settings.siteTitle },
+				{ property: "og:description", content: settings.siteDescription },
+				{ property: "og:type", content: "website" },
+				{ property: "og:image", content: heroImage },
+				{ name: "twitter:card", content: "summary_large_image" },
+				{ name: "twitter:image", content: heroImage },
 			],
 			links: [{ rel: "icon", href: settings.favicon || "/icon.png" }],
 		};
@@ -92,6 +100,19 @@ function accentStyle(settings: SiteSettings): CSSProperties {
 			? { "--secondary": settings.secondaryColor }
 			: {}),
 	} as CSSProperties;
+}
+
+const SITE_URL = (
+	(typeof process !== "undefined" ? process.env?.PUBLIC_SITE_URL : undefined) ||
+	(import.meta.env?.VITE_PUBLIC_SITE_URL as string | undefined) ||
+	""
+).replace(/\/+$/, "");
+
+function absoluteUrl(value: string) {
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) return value;
+	if (value.startsWith("//")) return `https:${value}`;
+	if (!SITE_URL) return value;
+	return `${SITE_URL}${value.startsWith("/") ? "" : "/"}${value}`;
 }
 
 function Home() {
@@ -401,7 +422,6 @@ function Hero({
 	onRsvp: () => void;
 	onViewProgramme: () => void;
 }) {
-	const isMobile = useIsMobile();
 	const heroImage = settings.heroImage || DEFAULT_SITE_SETTINGS.heroImage;
 
 	return (
@@ -420,10 +440,7 @@ function Hero({
 			/>
 			<div
 				aria-hidden
-				className={cn(
-					"pointer-events-none absolute inset-0",
-					isMobile ? "z-10 bg-black/50" : "z-10 bg-black/30",
-				)}
+				className="pointer-events-none absolute inset-0 z-10 bg-black/50 md:bg-black/30"
 			/>
 			<div
 				aria-hidden
@@ -441,10 +458,7 @@ function Hero({
 
 				<h1
 					className={cn(
-						"mt-3 font-serif leading-none tracking-tight text-primary",
-						isMobile
-							? "text-5xl text-balance"
-							: "text-7xl whitespace-nowrap md:text-8xl",
+						"mt-3 font-serif leading-none tracking-tight text-primary text-5xl text-balance md:text-7xl md:whitespace-nowrap lg:text-8xl",
 					)}
 				>
 					{settings.partnerA}{" "}
@@ -520,13 +534,22 @@ const countdownUnits: { label: string; key: keyof TimeLeft }[] = [
 ];
 
 function Countdown({ settings }: { settings: SiteSettings }) {
-	const target = new Date(settings.countdownTarget);
+	const target = useMemo(
+		() => new Date(settings.countdownTarget),
+		[settings.countdownTarget],
+	);
 	const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => getTimeLeft(target));
 
 	useEffect(() => {
 		const timer = setInterval(() => setTimeLeft(getTimeLeft(target)), 1000);
 		return () => clearInterval(timer);
 	}, [target]);
+
+	const expired =
+		timeLeft.days === 0 &&
+		timeLeft.hours === 0 &&
+		timeLeft.minutes === 0 &&
+		timeLeft.seconds === 0;
 
 	return (
 		<section className="mx-auto max-w-4xl px-3 pb-2.5 sm:pb-6">
@@ -535,30 +558,43 @@ function Countdown({ settings }: { settings: SiteSettings }) {
 					Counting down
 				</p>
 				<h2 className="mt-2 font-serif text-4xl tracking-tight sm:text-5xl">
-					Until we say I do
+					{expired ? "We said I do" : "Until we say I do"}
 				</h2>
 				<div className="mt-3">{divider}</div>
 			</div>
 
-			<div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
-				{countdownUnits.map((unit) => (
-					<div
-						key={unit.key}
-						className="relative overflow-hidden rounded-2xl border border-border bg-card p-3 text-center shadow-sm"
-					>
-						<span
-							aria-hidden
-							className="absolute inset-y-0 left-0 w-1 bg-secondary"
-						/>
-						<p className="font-serif text-5xl font-semibold tabular-nums text-primary sm:text-6xl">
-							{String(timeLeft[unit.key]).padStart(2, "0")}
-						</p>
-						<p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-secondary ">
-							{unit.label}
-						</p>
-					</div>
-				))}
-			</div>
+			{expired ? (
+				<div className="mt-6 flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+					<span className="grid size-14 place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg">
+						<Heart className="size-7 fill-current" strokeWidth={1.5} />
+					</span>
+					<h3 className="font-serif text-3xl">We&rsquo;re married!</h3>
+					<p className="max-w-sm leading-relaxed text-muted-foreground">
+						Thank you for celebrating {settings.partnerA} &amp;{" "}
+						{settings.partnerB} on {settings.dateLabel} in {settings.location}.
+					</p>
+				</div>
+			) : (
+				<div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+					{countdownUnits.map((unit) => (
+						<div
+							key={unit.key}
+							className="relative overflow-hidden rounded-2xl border border-border bg-card p-3 text-center shadow-sm"
+						>
+							<span
+								aria-hidden
+								className="absolute inset-y-0 left-0 w-1 bg-secondary"
+							/>
+							<p className="font-serif text-5xl font-semibold tabular-nums text-primary sm:text-6xl">
+								{String(timeLeft[unit.key]).padStart(2, "0")}
+							</p>
+							<p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-secondary ">
+								{unit.label}
+							</p>
+						</div>
+					))}
+				</div>
+			)}
 		</section>
 	);
 }

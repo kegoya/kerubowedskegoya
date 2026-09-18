@@ -1,13 +1,12 @@
-import { randomBytes } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "../db";
 import { settings } from "../db/schema";
-import { requireAuth } from "./admin";
+import { assertPasswordChanged, requireAuth } from "./admin";
+import { assertSameOrigin } from "./csrf";
+import { storeImage } from "./storage";
 
 export const SETTINGS_KEY = "site_settings";
 
@@ -103,7 +102,9 @@ export const getSiteSettings = createServerFn({ method: "GET" }).handler(
 export const updateSiteSettings = createServerFn({ method: "POST" })
 	.validator(siteSettingsSchema)
 	.handler(async ({ data }) => {
+		assertSameOrigin();
 		await requireAuth();
+		await assertPasswordChanged();
 
 		const value = JSON.stringify(data);
 		await db
@@ -114,46 +115,17 @@ export const updateSiteSettings = createServerFn({ method: "POST" })
 		return { success: true, settings: data };
 	});
 
-const IMAGE_EXT: Record<string, string> = {
-	"image/png": "png",
-	"image/jpeg": "jpg",
-	"image/webp": "webp",
-	"image/avif": "avif",
-	"image/gif": "gif",
-	"image/svg+xml": "svg",
-};
-
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
 export const uploadImage = createServerFn({ method: "POST" })
 	.validator((data: FormData) => data)
 	.handler(async ({ data }) => {
+		assertSameOrigin();
 		await requireAuth();
+		await assertPasswordChanged();
 
 		const file = data.get("file");
 		if (!(file instanceof File)) {
 			throw new Error("No image file provided.");
 		}
-		const ext = IMAGE_EXT[file.type];
-		if (!ext) {
-			throw new Error(
-				"Unsupported image type. Use PNG, JPG, WebP, AVIF, GIF or SVG.",
-			);
-		}
-		if (file.size > MAX_IMAGE_BYTES) {
-			throw new Error("Image must be 5 MB or smaller.");
-		}
 
-		const bytes = Buffer.from(await file.arrayBuffer());
-		const name = `${Date.now()}-${randomBytes(6).toString("hex")}.${ext}`;
-		const uploadRoot = resolve(
-			process.cwd(),
-			process.env.NODE_ENV === "production" ? ".output" : "",
-			"public",
-			"uploads",
-		);
-		await mkdir(uploadRoot, { recursive: true });
-		await writeFile(resolve(uploadRoot, name), bytes);
-
-		return { url: `/uploads/${name}` };
+		return await storeImage(file);
 	});

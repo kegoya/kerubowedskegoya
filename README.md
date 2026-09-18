@@ -1,217 +1,103 @@
-Welcome to your new TanStack Start app!
+# Wedding Invitation
 
-# Getting Started
+A digital wedding invitation for Elvin & Eric — December 28, 2026, Kisii, Kenya.
+Built with [TanStack Start](https://tanstack.com/start) (React 19), Nitro, Drizzle
+ORM on SQLite / Turso, and Tailwind CSS v4.
 
-To run this application:
+## Features
+
+- **Public invitation page** (`/`): hero with photo, live countdown, ceremony &
+  reception programme, and an RSVP form.
+- **Admin panel** (`/admin`): password-protected dashboard with
+  - RSVP responses table + stats (total, attending, guests expected),
+  - site-details editor (names, dates, images, colors, programme schedule),
+  - password management (changing it revokes all other sessions).
+
+## Getting Started
 
 ```bash
 npm install
-npm run dev
+npm run dev        # http://localhost:3000
 ```
 
-# Building For Production
+Other scripts:
 
-To build this application for production:
+```bash
+npm run build          # production build (Nitro / node server in .output)
+npm run preview        # preview the production build
+npm run check          # biome lint + format check
+npm run db:generate    # generate migrations after schema changes
+npm run db:push        # push schema to the database
+npm run db:studio      # open drizzle studio
+```
+
+## Environment Variables
+
+Create `.env.local` (or `.env`) with the variables you need:
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `TURSO_DATABASE_URL` | yes\* | Turso DB URL, e.g. `libsql://project-user.turso.io`. Defaults to `file:local.db` when unset. |
+| `TURSO_AUTH_TOKEN` | for remote | Turso database auth token. Not needed for local `file:` DBs. |
+| `ADMIN_PASSWORD` | fallback | Admin password used **only** until one is stored in the DB. Set a strong value. |
+| `PUBLIC_SITE_URL` | for OG | Public origin (e.g. `https://invite.example.com`). Used to build absolute Open Graph image URLs. `VITE_PUBLIC_SITE_URL` is also accepted. |
+| `STORAGE_S3_BUCKET` | for uploads | S3-compatible bucket name (Cloudflare R2, AWS S3, MinIO). When set, uploads go to object storage. |
+| `STORAGE_S3_ENDPOINT` | for R2 | Endpoint URL, e.g. `https://<account>.r2.cloudflarestorage.com`. |
+| `STORAGE_S3_REGION` | optional | Region (default `auto`, which suits R2). |
+| `STORAGE_S3_ACCESS_KEY_ID` | for uploads | Object storage access key. |
+| `STORAGE_S3_SECRET_ACCESS_KEY` | for uploads | Object storage secret key. |
+| `STORAGE_S3_PUBLIC_URL` | for uploads | Public URL prefix for uploaded files, e.g. `https://media.example.com`. |
+
+\* `TURSO_DATABASE_URL` is required for any remote deployment.
+
+### Admin password
+
+The admin password is resolved in this order:
+
+1. `admin_password` value stored in the `settings` table (takes precedence), or
+2. the `ADMIN_PASSWORD` environment variable.
+
+On first successful login from the env fallback, the password is hashed
+(scrypt + salt) and stored in the DB. Use the **Security** tab in the admin
+panel to rotate the password, which revokes every other active session.
+
+### Temporary password / forced change
+
+When the `force_password_change` key in the `settings` table is `"1"`, a
+successful login only unlocks a single **"Choose a new password"** screen.
+Until the password is changed, the protected endpoints (`listRsvps`,
+`updateSiteSettings`, `uploadImage`) refuse to run with
+_"You must change your temporary password before continuing."_ Changing the
+password clears the flag and revokes all other sessions.
+
+> Change the default! The included `.env.local` in this repo is a starter value
+> and is git-ignored.
+
+## Image Uploads
+
+Uploaded images go through the admin **Details** tab (drag & drop or picker,
+with client-side cropping, max 5 MB).
+
+- **Without `STORAGE_S3_*` vars** — files are written to `public/uploads/`
+  locally. Works for local dev and Node hosts with persistent disks.
+- **With `STORAGE_S3_*` vars** — files are uploaded to your S3-compatible
+  bucket and the returned URL is stored in site settings. **Use this for
+  serverless deploys** (Vercel, Netlify, Cloudflare) where the local disk is
+  ephemeral or read-only.
+
+## Deploying
 
 ```bash
 npm run build
+node dist/server/index.mjs   # or run via your host's Node entrypoint
 ```
 
-## Styling
+For Vercel/Netlify/Cloudflare deploys set the env vars above (Turso + object
+storage + `PUBLIC_SITE_URL`), since the runtime disk is not persistent.
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+## Security notes
 
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Remove `@tailwindcss/vite` and `tailwindcss` from `package.json`
-
-## Linting & Formatting
-
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
-
-```bash
-npm run lint
-npm run format
-npm run check
-```
-
-
-## Deploy with Nitro
-
-This project uses Nitro as a generic server adapter, so it can run on any Node-compatible host.
-
-```bash
-npm run build
-node dist/server/index.mjs
-```
-
-The build output is a self-contained Node server. To deploy, push the `dist/` directory to your host (Render, Fly.io, your own VPS, etc.) and run the server command above.
-
-For host-specific presets (Vercel, Netlify, Cloudflare, AWS Lambda, etc.) and tuning, see https://v3.nitro.build/deploy.
-
-
-## Shadcn
-
-Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
-
-```bash
-pnpm dlx shadcn@latest add button
-```
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+- Passwords are hashed with `scrypt` (64-byte key, random salt).
+- Logins are rate limited (5 attempts / 15 min) per client IP.
+- State-changing server functions verify the `Origin` header to guard against
+  CSRF; session cookies are `HttpOnly` with `SameSite=Lax`.

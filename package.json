@@ -20,6 +20,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1135.0",
     "@faker-js/faker": "^10.3.0",
     "@libsql/client": "^0.18.0",
     "@tailwindcss/vite": "^4.1.18",

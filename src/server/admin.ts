@@ -15,8 +15,11 @@ import { z } from "zod";
 
 import { db } from "../db";
 import { rsvps, sessions, settings } from "../db/schema";
+import { assertSameOrigin } from "./csrf";
+import { rateLimitLogin } from "./rate-limit";
 
 const PASSWORD_KEY = "admin_password";
+const FORCE_CHANGE_KEY = "force_password_change";
 
 const SESSION_COOKIE = "wedding_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
@@ -100,6 +103,33 @@ async function upsertPassword(value: string) {
 		.onConflictDoUpdate({ target: settings.key, set: { value } });
 }
 
+async function getForcePasswordChange() {
+	const row = await db
+		.select({ value: settings.value })
+		.from(settings)
+		.where(eq(settings.key, FORCE_CHANGE_KEY))
+		.get();
+	return row?.value != null && ["1", "true"].includes(row.value.toLowerCase());
+}
+
+async function setForcePasswordChange(force: boolean) {
+	await db
+		.insert(settings)
+		.values({ key: FORCE_CHANGE_KEY, value: force ? "1" : "0" })
+		.onConflictDoUpdate({
+			target: settings.key,
+			set: { value: force ? "1" : "0" },
+		});
+}
+
+export async function assertPasswordChanged() {
+	if (await getForcePasswordChange()) {
+		throw new Error(
+			"You must change your temporary password before continuing.",
+		);
+	}
+}
+
 async function createSession() {
 	const token = randomBytes(32).toString("base64url");
 	await db.insert(sessions).values({
@@ -145,7 +175,11 @@ async function destroySession() {
 
 export const getAuthStatus = createServerFn({ method: "GET" }).handler(
 	async () => {
-		return { authed: Boolean(await currentSessionToken()) };
+		const authed = Boolean(await currentSessionToken());
+		return {
+			authed,
+			forcePasswordChange: authed ? await getForcePasswordChange() : false,
+		};
 	},
 );
 
@@ -156,6 +190,9 @@ const loginSchema = z.object({
 export const login = createServerFn({ method: "POST" })
 	.validator(loginSchema)
 	.handler(async ({ data }) => {
+		assertSameOrigin();
+		rateLimitLogin();
+
 		const { ok, shouldMigrate } = await passwordMatches(data.password);
 		if (!ok) {
 			throw new Error("Incorrect password.");
@@ -164,10 +201,14 @@ export const login = createServerFn({ method: "POST" })
 			await upsertPassword(hashPassword(data.password));
 		}
 		await createSession();
-		return { success: true };
+		return {
+			success: true,
+			forcePasswordChange: await getForcePasswordChange(),
+		};
 	});
 
 export const logout = createServerFn({ method: "POST" }).handler(async () => {
+	assertSameOrigin();
 	await destroySession();
 	return { success: true };
 });
@@ -175,6 +216,7 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
 export const listRsvps = createServerFn({ method: "POST" }).handler(
 	async () => {
 		await requireAuth();
+		await assertPasswordChanged();
 
 		return db
 			.select({
@@ -199,6 +241,7 @@ const changePasswordSchema = z.object({
 export const changePassword = createServerFn({ method: "POST" })
 	.validator(changePasswordSchema)
 	.handler(async ({ data }) => {
+		assertSameOrigin();
 		const token = await requireAuth();
 
 		const { ok } = await passwordMatches(data.currentPassword);
@@ -207,6 +250,7 @@ export const changePassword = createServerFn({ method: "POST" })
 		}
 
 		await upsertPassword(hashPassword(data.newPassword));
+		await setForcePasswordChange(false);
 
 		// Revoke all other sessions; keep the current one signed in.
 		await db.delete(sessions).where(ne(sessions.token, token));
