@@ -33,7 +33,13 @@ export type RsvpResponse = {
 };
 
 export const submitRsvp = createServerFn({ method: "POST" })
-	.validator((input: RsvpInput) => rsvpSchema.parse(input))
+	.validator((input: RsvpInput) => {
+		const result = rsvpSchema.safeParse(input);
+		if (!result.success) {
+			throw new Error(JSON.stringify(result.error.issues));
+		}
+		return result.data;
+	})
 	.handler(async ({ data }) => {
 		assertSameOrigin();
 		rateLimitRsvp();

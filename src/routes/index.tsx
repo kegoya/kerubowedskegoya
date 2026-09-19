@@ -66,6 +66,35 @@ type FormState = {
 	message: string;
 };
 
+type RsvpFieldErrors = Partial<Record<keyof FormState, string[]>>;
+
+function parseFieldErrors(err: unknown): RsvpFieldErrors | null {
+	if (!(err instanceof Error)) return null;
+	try {
+		const issues = JSON.parse(err.message) as {
+			path?: (string | number)[];
+			message?: string;
+		}[];
+		if (!Array.isArray(issues)) return null;
+		const fields: RsvpFieldErrors = {};
+		let found = false;
+		for (const issue of issues) {
+			const field = issue.path?.[0];
+			if (typeof field !== "string" || !issue.message) continue;
+			found = true;
+			const existing = fields[field];
+			if (existing) {
+				existing.push(issue.message);
+			} else {
+				fields[field] = [issue.message];
+			}
+		}
+		return found ? fields : null;
+	} catch {
+		return null;
+	}
+}
+
 const initialForm: FormState = {
 	name: "",
 	email: "",
@@ -122,6 +151,7 @@ function Home() {
 		"idle" | "submitting" | "success" | "error"
 	>("idle");
 	const [error, setError] = useState<string | null>(null);
+	const [fieldErrors, setFieldErrors] = useState<RsvpFieldErrors>({});
 	const [successMessage, setSuccessMessage] = useState("");
 
 	function handleViewRsvp() {
@@ -140,6 +170,7 @@ function Home() {
 
 		setStatus("submitting");
 		setError(null);
+		setFieldErrors({});
 
 		try {
 			const response = await submitRsvp({
@@ -155,12 +186,26 @@ function Home() {
 			setStatus("success");
 		} catch (err) {
 			setStatus("error");
-			setError(
-				err instanceof Error
-					? err.message
-					: "Something went wrong. Please try again.",
-			);
+			const issues = parseFieldErrors(err);
+			if (issues) {
+				setFieldErrors(issues);
+			} else {
+				setError(
+					err instanceof Error
+						? err.message
+						: "Something went wrong. Please try again.",
+				);
+			}
 		}
+	}
+
+	function clearFieldError(field: keyof FormState) {
+		setFieldErrors((prev) => {
+			if (!prev[field]) return prev;
+			const next = { ...prev };
+			delete next[field];
+			return next;
+		});
 	}
 
 	return (
@@ -188,11 +233,14 @@ function Home() {
 				setForm={setForm}
 				status={status}
 				error={error}
+				fieldErrors={fieldErrors}
+				onFieldChange={clearFieldError}
 				successMessage={successMessage}
 				onSubmit={handleSubmit}
 				onReset={() => {
 					setForm(initialForm);
 					setStatus("idle");
+					setFieldErrors({});
 				}}
 			/>
 
@@ -223,6 +271,8 @@ function RsvpSection({
 	setForm,
 	status,
 	error,
+	fieldErrors,
+	onFieldChange,
 	successMessage,
 	onSubmit,
 	onReset,
@@ -232,10 +282,13 @@ function RsvpSection({
 	setForm: React.Dispatch<React.SetStateAction<FormState>>;
 	status: "idle" | "submitting" | "success" | "error";
 	error: string | null;
+	fieldErrors: RsvpFieldErrors;
+	onFieldChange: (field: keyof FormState) => void;
 	successMessage: string;
 	onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 	onReset: () => void;
 }) {
+	const fieldError = (field: keyof FormState) => fieldErrors[field]?.[0];
 	return (
 		<section
 			id="rsvp"
@@ -273,14 +326,21 @@ function RsvpSection({
 							required
 							autoComplete="name"
 							placeholder="Your full name"
+							aria-invalid={Boolean(fieldError("name"))}
 							value={form.name}
-							onChange={(event) =>
+							onChange={(event) => {
 								setForm((prev) => ({
 									...prev,
 									name: event.target.value,
-								}))
-							}
+								}));
+								onFieldChange("name");
+							}}
 						/>
+						{fieldError("name") && (
+							<p role="alert" className="text-sm text-destructive">
+								{fieldError("name")}
+							</p>
+						)}
 					</div>
 
 					<div className="grid gap-2">
@@ -291,26 +351,34 @@ function RsvpSection({
 							required
 							autoComplete="email"
 							placeholder="you@example.com"
+							aria-invalid={Boolean(fieldError("email"))}
 							value={form.email}
-							onChange={(event) =>
+							onChange={(event) => {
 								setForm((prev) => ({
 									...prev,
 									email: event.target.value,
-								}))
-							}
+								}));
+								onFieldChange("email");
+							}}
 						/>
+						{fieldError("email") && (
+							<p role="alert" className="text-sm text-destructive">
+								{fieldError("email")}
+							</p>
+						)}
 					</div>
 
 					<div className="grid gap-2.5">
 						<Label>Attendance</Label>
 						<RadioGroup
 							value={form.attending}
-							onValueChange={(value) =>
+							onValueChange={(value) => {
 								setForm((prev) => ({
 									...prev,
 									attending: value as "yes" | "no",
-								}))
-							}
+								}));
+								onFieldChange("attending");
+							}}
 						>
 							{attendances.map((attendance) => {
 								const selected = form.attending === attendance.value;
@@ -342,15 +410,21 @@ function RsvpSection({
 								);
 							})}
 						</RadioGroup>
+						{fieldError("attending") && (
+							<p role="alert" className="text-sm text-destructive">
+								{fieldError("attending")}
+							</p>
+						)}
 					</div>
 
 					<div className="grid gap-2">
 						<Label htmlFor="rsvp-guests">Guest Count</Label>
 						<Select
 							value={form.guests}
-							onValueChange={(value) =>
-								setForm((prev) => ({ ...prev, guests: value }))
-							}
+							onValueChange={(value) => {
+								setForm((prev) => ({ ...prev, guests: value }));
+								onFieldChange("guests");
+							}}
 						>
 							<SelectTrigger id="rsvp-guests" className="w-full">
 								<SelectValue placeholder="Select number of guests" />
@@ -363,6 +437,11 @@ function RsvpSection({
 								))}
 							</SelectContent>
 						</Select>
+						{fieldError("guests") && (
+							<p role="alert" className="text-sm text-destructive">
+								{fieldError("guests")}
+							</p>
+						)}
 					</div>
 
 					<div className="grid gap-2">
@@ -376,14 +455,21 @@ function RsvpSection({
 							id="rsvp-message"
 							rows={4}
 							placeholder="Share a note, well wishes, or dietary requirements..."
+							aria-invalid={Boolean(fieldError("message"))}
 							value={form.message}
-							onChange={(event) =>
+							onChange={(event) => {
 								setForm((prev) => ({
 									...prev,
 									message: event.target.value,
-								}))
-							}
+								}));
+								onFieldChange("message");
+							}}
 						/>
+						{fieldError("message") && (
+							<p role="alert" className="text-sm text-destructive">
+								{fieldError("message")}
+							</p>
+						)}
 					</div>
 
 					{error && (
