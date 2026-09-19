@@ -3,6 +3,7 @@ import { cn } from "cn";
 import {
 	CheckCircle2,
 	Globe,
+	Heart,
 	ImagePlus,
 	KeyRound,
 	Loader2,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import type { DragEvent, FormEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Toaster, toast } from "sonner";
 import { ImageCropper } from "#/components/image-cropper";
 import { ThemeToggle } from "#/components/theme-toggle";
 import { Badge } from "#/components/ui/badge";
@@ -26,6 +28,7 @@ import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
+import { PasswordInput } from "#/components/ui/password-input";
 import {
 	Select,
 	SelectContent,
@@ -33,6 +36,23 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "#/components/ui/select";
+import { Separator } from "#/components/ui/separator";
+import {
+	Sidebar,
+	SidebarContent,
+	SidebarFooter,
+	SidebarGroup,
+	SidebarGroupLabel,
+	SidebarHeader,
+	SidebarInset,
+	SidebarMenu,
+	SidebarMenuBadge,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarProvider,
+	SidebarSeparator,
+	SidebarTrigger,
+} from "#/components/ui/sidebar";
 import {
 	Table,
 	TableBody,
@@ -41,7 +61,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "#/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import { Textarea } from "#/components/ui/textarea";
 import {
 	changePassword,
@@ -75,8 +94,6 @@ function formatDate(value: string) {
 		timeStyle: "short",
 	});
 }
-
-type Tab = "responses" | "details" | "security";
 
 function Admin() {
 	const [authed, setAuthed] = useState<boolean | null>(null);
@@ -168,19 +185,7 @@ function Admin() {
 
 	return (
 		<main className="min-h-dvh bg-background font-sans text-foreground antialiased">
-			<header className="flex items-center justify-between p-4 sm:p-6">
-				<p className="font-serif text-xl">RSVP Admin</p>
-				<div className="flex items-center gap-2">
-					{authed && (
-						<Button variant="outline" size="sm" onClick={handleLogout}>
-							<LogOut />
-							Log out
-						</Button>
-					)}
-					<ThemeToggle />
-				</div>
-			</header>
-
+			<Toaster position="bottom-right" richColors />
 			{authed === null ? (
 				<div className="flex items-center justify-center gap-2 py-40 text-muted-foreground">
 					<Loader2 className="animate-spin" />
@@ -201,9 +206,8 @@ function Admin() {
 					<form onSubmit={handleLogin} className="grid gap-4" noValidate>
 						<div className="grid gap-2">
 							<Label htmlFor="admin-password">Password</Label>
-							<Input
+							<PasswordInput
 								id="admin-password"
-								type="password"
 								autoComplete="current-password"
 								placeholder="Admin password"
 								value={passwordInput}
@@ -230,38 +234,201 @@ function Admin() {
 					}}
 				/>
 			) : (
-				<section className="mx-auto max-w-5xl px-4 pb-24 sm:px-6">
-					<Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
-						<TabsList className="w-full">
-							<TabsTrigger value="responses" className="flex-1 gap-2">
-								<Users className="size-4" />
-								Responses
-							</TabsTrigger>
-							<TabsTrigger value="details" className="flex-1 gap-2">
-								<Globe className="size-4" />
-								Details
-							</TabsTrigger>
-							<TabsTrigger value="security" className="flex-1 gap-2">
-								<KeyRound className="size-4" />
-								Security
-							</TabsTrigger>
-						</TabsList>
-
-						{tab === "responses" && (
-							<ResponsesTab
-								status={status}
-								error={error}
-								rsvps={rsvps}
-								attending={attending}
-								totalGuests={totalGuests}
+				<SidebarProvider>
+					<AppSidebar
+						tab={tab}
+						onTabChange={setTab}
+						rsvpCount={rsvps.length}
+						onLogout={handleLogout}
+					/>
+					<SidebarInset>
+						<header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 sm:px-6">
+							<SidebarTrigger className="-ml-1" />
+							<Separator
+								orientation="vertical"
+								className="mr-2 data-[orientation=vertical]:h-4"
 							/>
-						)}
-						{tab === "details" && <DetailsTab />}
-						{tab === "security" && <SecurityTab />}
-					</Tabs>
-				</section>
+							<h1 className="flex-1 font-serif text-lg">{tabLabels[tab]}</h1>
+							<ThemeToggle />
+						</header>
+						<div className="flex flex-1 flex-col gap-4 p-4 pb-28 md:p-6">
+							{tab === "responses" && (
+								<ResponsesTab
+									status={status}
+									error={error}
+									rsvps={rsvps}
+									attending={attending}
+									totalGuests={totalGuests}
+								/>
+							)}
+							{tab === "details" && <DetailsTab />}
+							{tab === "security" && <SecurityTab />}
+						</div>
+						<MobileNavBar
+							tab={tab}
+							onTabChange={setTab}
+							onLogout={handleLogout}
+						/>
+					</SidebarInset>
+				</SidebarProvider>
 			)}
 		</main>
+	);
+}
+
+type Tab = "responses" | "details" | "security";
+
+const tabLabels: Record<Tab, string> = {
+	responses: "RSVP Responses",
+	details: "Invitation Details",
+	security: "Security",
+};
+
+const navItems: { id: Tab; label: string; icon: typeof Users }[] = [
+	{ id: "responses", label: "Responses", icon: Users },
+	{ id: "details", label: "Details", icon: Globe },
+	{ id: "security", label: "Security", icon: KeyRound },
+];
+
+function MobileNavBar({
+	tab,
+	onTabChange,
+	onLogout,
+}: {
+	tab: Tab;
+	onTabChange: (tab: Tab) => void;
+	onLogout: () => void;
+}) {
+	return (
+		<nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
+			<ul className="mx-auto flex max-w-md items-stretch justify-around gap-1 px-2 py-1.5">
+				{navItems.map(({ id, label, icon: Icon }) => {
+					const active = tab === id;
+					return (
+						<li key={id}>
+							<button
+								type="button"
+								aria-current={active ? "page" : undefined}
+								onClick={() => onTabChange(id)}
+								className={cn(
+									"flex min-w-16 flex-col items-center gap-0.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+									active
+										? "bg-primary/10 text-primary"
+										: "text-muted-foreground hover:text-foreground",
+								)}
+							>
+								<Icon className="size-5" />
+								{label}
+							</button>
+						</li>
+					);
+				})}
+				<li>
+					<button
+						type="button"
+						aria-label="Log out"
+						onClick={onLogout}
+						className="flex min-w-16 flex-col items-center gap-0.5 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-destructive"
+					>
+						<LogOut className="size-5" />
+						Log out
+					</button>
+				</li>
+			</ul>
+		</nav>
+	);
+}
+
+function AppSidebar({
+	tab,
+	onTabChange,
+	rsvpCount,
+	onLogout,
+}: {
+	tab: Tab;
+	onTabChange: (tab: Tab) => void;
+	rsvpCount: number;
+	onLogout: () => void;
+}) {
+	return (
+		<Sidebar collapsible="icon" variant="inset">
+			<SidebarHeader>
+				<SidebarMenu>
+					<SidebarMenuItem>
+						<SidebarMenuButton
+							size="lg"
+							className="data-[active=true]:bg-transparent"
+						>
+							<div className="grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-secondary text-primary-foreground">
+								<Heart className="size-4" />
+							</div>
+							<div className="grid flex-1 text-left text-sm leading-tight">
+								<span className="truncate font-serif text-base">
+									RSVP Admin
+								</span>
+								<span className="truncate text-xs text-sidebar-foreground/70">
+									Elvin &amp; Eric
+								</span>
+							</div>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
+				</SidebarMenu>
+			</SidebarHeader>
+
+			<SidebarSeparator />
+
+			<SidebarContent>
+				<SidebarGroup>
+					<SidebarGroupLabel>Manage</SidebarGroupLabel>
+					<SidebarMenu>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								isActive={tab === "responses"}
+								onClick={() => onTabChange("responses")}
+								tooltip="Responses"
+							>
+								<Users />
+								<span>Responses</span>
+								{rsvpCount > 0 && (
+									<SidebarMenuBadge>{rsvpCount}</SidebarMenuBadge>
+								)}
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								isActive={tab === "details"}
+								onClick={() => onTabChange("details")}
+								tooltip="Details"
+							>
+								<Globe />
+								<span>Details</span>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								isActive={tab === "security"}
+								onClick={() => onTabChange("security")}
+								tooltip="Security"
+							>
+								<KeyRound />
+								<span>Security</span>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+					</SidebarMenu>
+				</SidebarGroup>
+			</SidebarContent>
+
+			<SidebarFooter>
+				<SidebarMenu>
+					<SidebarMenuItem>
+						<SidebarMenuButton onClick={onLogout} tooltip="Log out">
+							<LogOut />
+							<span>Log out</span>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
+				</SidebarMenu>
+			</SidebarFooter>
+		</Sidebar>
 	);
 }
 
@@ -286,6 +453,7 @@ function ForceChangeScreen({ onChanged }: { onChanged: () => void }) {
 		changePassword({ data: { currentPassword: current, newPassword: next } })
 			.then(() => {
 				setStatus("success");
+				toast.success("Password updated successfully");
 				setCurrent("");
 				setNext("");
 				setConfirm("");
@@ -333,9 +501,8 @@ function ForceChangeScreen({ onChanged }: { onChanged: () => void }) {
 					>
 						<div className="grid gap-2">
 							<Label htmlFor="force-current-password">Temporary Password</Label>
-							<Input
+							<PasswordInput
 								id="force-current-password"
-								type="password"
 								autoComplete="current-password"
 								placeholder="The temporary password you signed in with"
 								value={current}
@@ -344,9 +511,8 @@ function ForceChangeScreen({ onChanged }: { onChanged: () => void }) {
 						</div>
 						<div className="grid gap-2">
 							<Label htmlFor="force-new-password">New Password</Label>
-							<Input
+							<PasswordInput
 								id="force-new-password"
-								type="password"
 								autoComplete="new-password"
 								placeholder="At least 8 characters"
 								value={next}
@@ -357,9 +523,8 @@ function ForceChangeScreen({ onChanged }: { onChanged: () => void }) {
 							<Label htmlFor="force-confirm-password">
 								Confirm New Password
 							</Label>
-							<Input
+							<PasswordInput
 								id="force-confirm-password"
-								type="password"
 								autoComplete="new-password"
 								value={confirm}
 								onChange={(event) => setConfirm(event.target.value)}
@@ -1219,6 +1384,7 @@ function SecurityTab() {
 		changePassword({ data: { currentPassword: current, newPassword: next } })
 			.then(() => {
 				setStatus("success");
+				toast.success("Password updated successfully");
 				setCurrent("");
 				setNext("");
 				setConfirm("");
@@ -1254,9 +1420,8 @@ function SecurityTab() {
 					<form onSubmit={handleChangePassword} className="max-w-sm grid gap-4">
 						<div className="grid gap-2">
 							<Label htmlFor="current-password">Current Password</Label>
-							<Input
+							<PasswordInput
 								id="current-password"
-								type="password"
 								autoComplete="current-password"
 								value={current}
 								onChange={(event) => setCurrent(event.target.value)}
@@ -1264,9 +1429,8 @@ function SecurityTab() {
 						</div>
 						<div className="grid gap-2">
 							<Label htmlFor="new-password">New Password</Label>
-							<Input
+							<PasswordInput
 								id="new-password"
-								type="password"
 								autoComplete="new-password"
 								placeholder="At least 8 characters"
 								value={next}
@@ -1275,9 +1439,8 @@ function SecurityTab() {
 						</div>
 						<div className="grid gap-2">
 							<Label htmlFor="confirm-password">Confirm New Password</Label>
-							<Input
+							<PasswordInput
 								id="confirm-password"
-								type="password"
 								autoComplete="new-password"
 								value={confirm}
 								onChange={(event) => setConfirm(event.target.value)}
