@@ -222,7 +222,7 @@ export const listRsvps = createServerFn({ method: "POST" }).handler(
 			.select({
 				id: rsvps.id,
 				name: rsvps.name,
-				email: rsvps.email,
+				phone: rsvps.phone,
 				attending: rsvps.attending,
 				guests: rsvps.guests,
 				message: rsvps.message,

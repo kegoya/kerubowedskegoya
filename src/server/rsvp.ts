@@ -8,7 +8,11 @@ import { rateLimitRsvp } from "./rate-limit";
 
 export const rsvpSchema = z.object({
 	name: z.string().trim().min(1, "Please enter your full name").max(120),
-	email: z.string().trim().email("Please enter a valid email address").max(200),
+	phone: z
+		.string()
+		.trim()
+		.regex(/^\+?[0-9()\s-]{7,20}$/, "Please enter a valid phone number")
+		.max(30),
 	attending: z.enum(["yes", "no"], {
 		message: "Please select whether you will attend",
 	}),

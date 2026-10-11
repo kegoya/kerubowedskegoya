@@ -6,18 +6,26 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design System
+ * ============================================================
+ * DESIGN SYSTEM
+ * ============================================================
  *
  * Brand colors:
  * - Burgundy: Primary brand/action color
- * - Navy Blue: Secondary/supporting brand color
+ * - Navy Blue: Secondary/supporting brand color in light mode
+ * - Slate: Dark theme foundation
  * - Dark Grey: Text, navigation, structure
  * - White: Main surfaces and contrast
  *
- * All colors use OKLCH.
+ * Color format: OKLCH
  */
 
+/* ============================================================
+ * TAILWIND THEME TOKENS
+ * ============================================================ */
+
 @theme inline {
+  /* Border radius */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -29,6 +37,7 @@
   /* Typography */
   --font-serif: "Cormorant Garamond", ui-serif, Georgia, Cambria,
     "Times New Roman", serif;
+
   --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, sans-serif;
 
@@ -61,6 +70,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+
   /* Charts */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -79,19 +91,19 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* ============================================================
+ * LIGHT THEME
+ * ============================================================ */
+
 :root {
   --radius: 0.625rem;
   color-scheme: light;
 
-  /* --------------------------------
-   * LIGHT THEME
-   * -------------------------------- */
-
-  /* White background */
+  /* Background and foreground */
   --background: oklch(0.985 0.003 90);
   --foreground: oklch(0.22 0.015 260);
 
-  /* White cards */
+  /* Cards */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.015 260);
 
@@ -101,14 +113,14 @@
 
   /*
    * BURGUNDY
-   * Main brand / primary actions
+   * Main brand and primary actions
    */
   --primary: oklch(0.42 0.16 20);
   --primary-foreground: oklch(0.99 0 0);
 
   /*
    * NAVY BLUE
-   * Secondary brand color
+   * Secondary/supporting brand color
    */
   --secondary: oklch(0.34 0.09 255);
   --secondary-foreground: oklch(0.99 0 0);
@@ -117,9 +129,7 @@
   --muted: oklch(0.95 0.008 260);
   --muted-foreground: oklch(0.48 0.015 260);
 
-  /*
-   * Burgundy-tinted accent
-   */
+  /* Burgundy-tinted accent */
   --accent: oklch(0.93 0.035 20);
   --accent-foreground: oklch(0.30 0.10 20);
 
@@ -127,16 +137,21 @@
   --destructive: oklch(0.55 0.20 25);
   --destructive-foreground: oklch(0.99 0 0);
 
-  /* Borders / inputs */
+  /* Borders and inputs */
   --border: oklch(0.89 0.012 260);
   --input: oklch(0.89 0.012 260);
 
   /* Burgundy focus ring */
   --ring: oklch(0.42 0.16 20);
 
+  
+    --gold: #B18A35;
+    --gold-foreground: #ffffff;
+  
+
   /*
    * Chart palette
-   * Burgundy + Navy + supporting neutrals
+   * Burgundy, navy, and supporting neutrals
    */
   --chart-1: oklch(0.42 0.16 20);
   --chart-2: oklch(0.34 0.09 255);
@@ -146,8 +161,7 @@
 
   /*
    * Sidebar
-   *
-   * Dark navy structure with burgundy branding.
+   * Dark navy structure with burgundy branding
    */
   --sidebar: oklch(0.24 0.035 255);
   --sidebar-foreground: oklch(0.97 0.005 90);
@@ -162,87 +176,157 @@
   --sidebar-ring: oklch(0.42 0.16 20);
 }
 
-.dark {
+/* ============================================================
+ * SLATE DARK THEME
+ * ============================================================ */
+
+ .dark {
   color-scheme: dark;
 
-  /* --------------------------------
-   * DARK THEME
-   * -------------------------------- */
+  /* Midnight navy background */
+  --background: #0D1431;
+  --foreground: oklch(0.96 0.005 255);
 
-  /* Dark grey / navy foundation */
-  --background: oklch(0.17 0.015 260);
-  --foreground: oklch(0.96 0.005 90);
+  /* Slightly lighter navy cards */
+  --card: #151D3B;
+  --card-foreground: oklch(0.96 0.005 255);
 
-  /* Dark grey cards */
-  --card: oklch(0.21 0.018 260);
-  --card-foreground: oklch(0.96 0.005 90);
+  /* Popovers */
+  --popover: #151D3B;
+  --popover-foreground: oklch(0.96 0.005 255);
 
-  --popover: oklch(0.21 0.018 260);
-  --popover-foreground: oklch(0.96 0.005 90);
-
-  /*
-   * BURGUNDY
-   * Slightly brighter for dark-mode contrast.
-   */
+  /* Keep your existing burgundy brand color */
   --primary: oklch(0.58 0.17 20);
   --primary-foreground: oklch(0.99 0 0);
 
-  /*
-   * NAVY BLUE
-   */
-  --secondary: oklch(0.48 0.10 255);
-  --secondary-foreground: oklch(0.99 0 0);
+  /* Supporting slate */
+  --secondary: oklch(0.36 0.035 255);
+  --secondary-foreground: oklch(0.96 0.005 255);
 
-  /* Dark neutral surfaces */
-  --muted: oklch(0.27 0.018 260);
-  --muted-foreground: oklch(0.72 0.015 260);
+  --muted: #202945;
+  --muted-foreground: oklch(0.78 0.02 255);
 
-  /* Burgundy accent */
   --accent: oklch(0.30 0.07 20);
-  --accent-foreground: oklch(0.97 0.005 90);
+  --accent-foreground: oklch(0.97 0.005 255);
 
-  /* Destructive */
   --destructive: oklch(0.65 0.18 25);
   --destructive-foreground: oklch(0.99 0 0);
 
-  /* Borders / inputs */
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-
-  /* Burgundy focus */
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.58 0.17 20);
+
+  --gold: #D4B15F;
+  --gold-foreground: #0D1431;
 
   /* Charts */
   --chart-1: oklch(0.58 0.17 20);
-  --chart-2: oklch(0.48 0.10 255);
-  --chart-3: oklch(0.70 0.02 260);
+  --chart-2: oklch(0.65 0.04 255);
+  --chart-3: oklch(0.72 0.02 255);
   --chart-4: oklch(0.65 0.10 20);
-  --chart-5: oklch(0.62 0.08 255);
+  --chart-5: oklch(0.52 0.06 255);
 
-  /*
-   * Sidebar
-   * Deep navy/dark grey with burgundy active state.
-   */
-  --sidebar: oklch(0.14 0.018 260);
-  --sidebar-foreground: oklch(0.96 0.005 90);
+  /* Sidebar */
+  --sidebar: #090F25;
+  --sidebar-foreground: oklch(0.96 0.005 255);
 
   --sidebar-primary: oklch(0.58 0.17 20);
   --sidebar-primary-foreground: oklch(0.99 0 0);
 
-  --sidebar-accent: oklch(0.24 0.04 255);
-  --sidebar-accent-foreground: oklch(0.97 0.005 90);
+  --sidebar-accent: #202945;
+  --sidebar-accent-foreground: oklch(0.97 0.005 255);
 
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.58 0.17 20);
 }
+
+/* ============================================================
+ * BASE STYLES
+ * ============================================================ */
 
 @layer base {
   * {
     border-color: var(--color-border);
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  /*
+   * Accessible keyboard focus
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 3px;
+  }
+
+  /*
+   * Respect reduced-motion preferences for page scrolling
+   */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+/* ============================================================
+ * WHATSAPP FLOATING BUTTON ANIMATIONS
+ * ============================================================ */
+
+@keyframes whatsapp-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) translateX(12px);
+  }
+
+  65% {
+    opacity: 1;
+    transform: scale(1.06) translateX(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+}
+
+@keyframes whatsapp-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(37 211 102 / 45%);
+  }
+
+  70% {
+    box-shadow: 0 0 0 12px rgb(37 211 102 / 0%);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgb(37 211 102 / 0%);
+  }
+}
+
+.whatsapp-pop {
+  animation: whatsapp-pop 650ms cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+
+.whatsapp-float-pulse {
+  animation: whatsapp-pulse 2.4s infinite;
+}
+
+/* ============================================================
+ * REDUCED MOTION
+ * ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .whatsapp-pop,
+  .whatsapp-float-pulse {
+    animation: none;
   }
 }

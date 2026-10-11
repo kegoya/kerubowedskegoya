@@ -4,7 +4,7 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 export const rsvps = sqliteTable("rsvps", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
 	name: text("name").notNull(),
-	email: text("email").notNull(),
+	phone: text("email").notNull(),
 	attending: text("attending", { enum: ["yes", "no"] }).notNull(),
 	guests: integer("guests").notNull().default(1),
 	message: text("message"),

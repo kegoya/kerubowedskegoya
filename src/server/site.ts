@@ -19,6 +19,16 @@ export const scheduleItemSchema = z.object({
 	icon: z.enum(["church", "food"]),
 });
 
+export const venueSchema = z.object({
+	name: z.string().trim().min(1, "Venue name is required").max(120),
+	address: z.string().trim().min(1, "Venue address is required").max(200),
+	mapsUrl: z.string().trim().max(1000).default(""),
+	mapQuery: z.string().trim().max(200).default(""),
+	purpose: z.string().trim().max(120).default(""),
+});
+
+export type Venue = z.infer<typeof venueSchema>;
+
 export const siteSettingsSchema = z.object({
 	siteTitle: z.string().min(1).max(120),
 	siteDescription: z.string().min(1).max(300),
@@ -29,6 +39,11 @@ export const siteSettingsSchema = z.object({
 	dateLabel: z.string().min(1, "Date is required").max(120),
 	countdownTarget: z.string().min(1, "Countdown target is required"),
 	location: z.string().min(1, "Location is required").max(120),
+	church: venueSchema,
+	reception: venueSchema,
+	whatsappNumber: z.string().trim().max(40).default(""),
+	whatsappGroupLink: z.string().trim().max(1000).default(""),
+	giftNumber: z.string().trim().max(40).default(""),
 	heroImage: z.string().max(1000).default(""),
 	favicon: z.string().max(1000).default(""),
 	rsvpDeadline: z.string().min(1).max(120),
@@ -53,6 +68,25 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
 	dateLabel: "December 28, 2026",
 	countdownTarget: "2026-12-28T07:00:00.000Z",
 	location: "Kisii, Kenya",
+	church: {
+		name: "Nyanchwa SDA Church",
+		address: "Nyanchwa Adventist Complex, Kisii, Kenya",
+		mapsUrl:
+			"https://www.google.com/maps/search/?api=1&query=Nyanchwa+SDA+Church%2C+Kisii%2C+Kenya",
+		mapQuery: "Nyanchwa SDA Church",
+		purpose: "Wedding ceremony",
+	},
+	reception: {
+		name: "Kisii National Polytechnic",
+		address: "Kisii, Kenya",
+		mapsUrl:
+			"https://www.google.com/maps/search/?api=1&query=Kisii+National+Polytechnic%2C+Kisii%2C+Kenya",
+		mapQuery: "Kisii National Polytechnic",
+		purpose: "Wedding reception",
+	},
+	whatsappNumber: "+254 728 258 654",
+	whatsappGroupLink: "https://chat.whatsapp.com/YOUR_INVITE_CODE",
+	giftNumber: "0728 258 654",
 	heroImage: "/main.png",
 	favicon: "/icon.png",
 	rsvpDeadline: "December 14, 2026",
