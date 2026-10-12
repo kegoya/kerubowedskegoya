@@ -48,7 +48,7 @@ export default function Gallery({ settings }: HomeSectionProps) {
                                 src={featured.image}
                                 alt={featured.alt}
                                 loading="lazy"
-                                className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
+                                className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.03]"
                             />
 
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-5 pb-5 pt-16 sm:px-8 sm:pb-8">
@@ -75,7 +75,7 @@ export default function Gallery({ settings }: HomeSectionProps) {
                                     src={item.image}
                                     alt={item.alt}
                                     loading="lazy"
-                                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
                                 />
                             </div>
 
