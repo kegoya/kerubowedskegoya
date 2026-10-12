@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import ReactCrop, {
 	type Crop,
 	centerCrop,
-	cropToCanvas,
 	makeAspectCrop,
 	type PixelCrop,
 } from "react-image-crop";
@@ -66,24 +65,72 @@ function toPercentCropFromPixel(
 	return toPercentCrop(pixel, containerWidth, containerHeight);
 }
 
+const MAX_OUTPUT_DIMENSION = 1920;
+const OUTPUT_QUALITY = 0.85;
+
+function canvasToBlob(
+	canvas: HTMLCanvasElement,
+	type: string,
+	quality?: number,
+): Promise<Blob | null> {
+	return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
 async function cropToFile(
 	image: HTMLImageElement,
 	crop: PixelCrop,
 	originalName: string,
 ): Promise<File> {
+	const scale = Math.min(
+		1,
+		MAX_OUTPUT_DIMENSION / Math.max(crop.width, crop.height),
+	);
+	const width = Math.max(1, Math.round(crop.width * scale));
+	const height = Math.max(1, Math.round(crop.height * scale));
+
 	const canvas = document.createElement("canvas");
-	await cropToCanvas(image, canvas, crop);
-	const blob = await new Promise<Blob | null>((resolve) =>
-		canvas.toBlob(resolve, "image/png"),
+	canvas.width = width;
+	canvas.height = height;
+
+	const context = canvas.getContext("2d");
+	if (!context) {
+		throw new Error("Could not process the image.");
+	}
+	context.imageSmoothingEnabled = true;
+	context.imageSmoothingQuality = "high";
+	context.drawImage(
+		image,
+		crop.x,
+		crop.y,
+		crop.width,
+		crop.height,
+		0,
+		0,
+		width,
+		height,
 	);
-	const ext = originalName.includes(".")
-		? originalName.slice(originalName.lastIndexOf("."))
-		: ".png";
-	return new File(
-		[blob ?? new Blob()],
-		`${originalName.replace(/\.[^.]+$/, "")}-crop${ext}`,
-		{ type: "image/png" },
-	);
+
+	let blob = await canvasToBlob(canvas, "image/webp", OUTPUT_QUALITY);
+	let type = "image/webp";
+	let ext = ".webp";
+
+	if (!blob) {
+		blob = await canvasToBlob(canvas, "image/jpeg", OUTPUT_QUALITY);
+		type = "image/jpeg";
+		ext = ".jpg";
+	}
+	if (!blob) {
+		blob = await canvasToBlob(canvas, "image/png");
+		type = "image/png";
+		ext = ".png";
+	}
+	if (!blob) {
+		throw new Error("Could not process the image.");
+	}
+
+	return new File([blob], `${originalName.replace(/\.[^.]+$/, "")}-crop${ext}`, {
+		type,
+	});
 }
 
 export function ImageCropper({

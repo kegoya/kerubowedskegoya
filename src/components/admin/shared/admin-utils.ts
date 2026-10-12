@@ -22,3 +22,4 @@ export function formatDate(value: string) {
   export const DEFAULT_PRIMARY_HEX = "#8b1e3f";
   export const DEFAULT_SECONDARY_HEX = "#1e3a8a";
   export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+  export const MAX_SOURCE_IMAGE_BYTES = 25 * 1024 * 1024;

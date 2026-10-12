@@ -7,7 +7,7 @@ import { uploadImage } from "#/server/site";
 import { cn } from "cn";
 import { ImagePlus, Loader2, RotateCcw, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
-import { MAX_IMAGE_BYTES } from "../shared/admin-utils";
+import { MAX_SOURCE_IMAGE_BYTES } from "../shared/admin-utils";
 
 import type { DragEvent } from "react";
 
@@ -38,8 +38,8 @@ export default function ImagePicker({
 		if (!file.type.startsWith("image/")) {
 			return "Only image files are supported.";
 		}
-		if (file.size > MAX_IMAGE_BYTES) {
-			return "Image must be 5 MB or smaller.";
+		if (file.size > MAX_SOURCE_IMAGE_BYTES) {
+			return "Image must be 25 MB or smaller.";
 		}
 		return null;
 	}
