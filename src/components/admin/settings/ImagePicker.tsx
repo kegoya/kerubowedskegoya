@@ -7,7 +7,7 @@ import { uploadImage } from "#/server/site";
 import { cn } from "cn";
 import { ImagePlus, Loader2, RotateCcw, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
-import { MAX_SOURCE_IMAGE_BYTES } from "../shared/admin-utils";
+import { MAX_SOURCE_IMAGE_BYTES, toImageUrl } from "../shared/admin-utils";
 
 import type { DragEvent } from "react";
 
@@ -169,9 +169,20 @@ export default function ImagePicker({
 
 			<Input
 				value={value}
-				onChange={(event) => onValue(event.target.value)}
-				placeholder="…or paste a path or URL"
+				onChange={(event) => onValue(toImageUrl(event.target.value))}
+				placeholder="…or paste a path, URL or Google Drive share link"
 			/>
+			<p className="text-xs text-muted-foreground">
+				Google Drive links (
+				<span className="font-medium text-foreground">
+					drive.google.com/file/d/…
+				</span>
+				) are converted automatically. Make sure the file is shared with{" "}
+				<span className="font-medium text-foreground">
+					&ldquo;Anyone with the link&rdquo;
+				</span>
+				.
+			</p>
 
 			<ImageCropper
 				open={showCropper && pendingFile !== null}
