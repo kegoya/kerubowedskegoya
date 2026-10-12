@@ -82,13 +82,21 @@ export async function storeImage(file: File): Promise<{ url: string }> {
 		return { url: await storeRemote(bytes, `uploads/${name}`, file.type) };
 	}
 
-	const uploadRoot = resolve(
-		process.cwd(),
-		process.env.NODE_ENV === "production" ? ".output" : "",
-		"public",
-		"uploads",
-	);
-	await mkdir(uploadRoot, { recursive: true });
-	await writeFile(resolve(uploadRoot, name), bytes);
-	return { url: `/uploads/${name}` };
+	try {
+		const uploadRoot = resolve(
+			process.cwd(),
+			process.env.NODE_ENV === "production" ? ".output" : "",
+			"public",
+			"uploads",
+		);
+		await mkdir(uploadRoot, { recursive: true });
+		await writeFile(resolve(uploadRoot, name), bytes);
+		return { url: `/uploads/${name}` };
+	} catch (cause) {
+		throw new Error(
+			`Could not save the image to the server disk (${
+				cause instanceof Error ? cause.message : "unknown error"
+			}). On serverless hosts like Vercel the runtime disk is read-only, so set the STORAGE_S3_BUCKET, STORAGE_S3_ACCESS_KEY_ID, STORAGE_S3_SECRET_ACCESS_KEY and STORAGE_S3_PUBLIC_URL environment variables to store uploads in object storage (see README).`,
+		);
+	}
 }
