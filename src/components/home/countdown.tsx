@@ -1,7 +1,7 @@
 import { Heart } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { HomeSectionProps } from "./types";
 import { SectionDivider } from "./section-divider";
+import type { HomeSectionProps } from "./types";
 
 
 export function Countdown({ settings }: HomeSectionProps) {
@@ -52,7 +52,7 @@ export function Countdown({ settings }: HomeSectionProps) {
         timeLeft.seconds === 0;
 
     return (
-        <section className="mx-auto max-w-4xl px-3 pb-2.5 sm:pb-6">
+        <section className="mx-auto max-w-4xl px-3 pb-3 sm:pb-6">
             <div className="text-center">
                 
 

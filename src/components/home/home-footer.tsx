@@ -13,7 +13,7 @@ export function HomeFooter({ settings }: HomeSectionProps) {
   ];
 
   return (
-    <footer className="border-t border-border bg-background px-4 py-10 text-foreground sm:px-6 sm:py-14">
+    <footer className="border-t border-border bg-background px-4 py-6 text-foreground sm:px-6 sm:py-8">
       <div className="mx-auto max-w-6xl">
         {/* Couple introduction */}
         <div className="text-center">
@@ -33,7 +33,7 @@ export function HomeFooter({ settings }: HomeSectionProps) {
         </div>
 
         {/* Footer navigation and details */}
-        <div className="mt-10 grid gap-9 border-t border-border pt-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
+        <div className="mt-5 grid gap-9 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
           {/* Quick links */}
           <div>
             <h3 className="font-serif text-xl">Quick Links</h3>
@@ -105,7 +105,7 @@ export function HomeFooter({ settings }: HomeSectionProps) {
         </div>
 
         {/* Copyright and developer credit */}
-        <div className="mt-10 flex flex-col items-center gap-3 border-t border-border pt-6 text-center text-xs text-muted-foreground sm:flex-row sm:justify-between sm:text-left">
+        <div className="mt-5 flex flex-col items-center gap-3 border-t border-border pt-3 text-center text-xs text-muted-foreground sm:flex-row sm:justify-between sm:text-left">
           <p>
             © {new Date().getFullYear()} {settings.partnerA} &amp;{" "}
             {settings.partnerB} Wedding. All rights reserved.

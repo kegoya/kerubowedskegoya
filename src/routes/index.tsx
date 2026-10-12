@@ -23,6 +23,7 @@ import { parseFieldErrors } from "@/components/home/validation";
 import { VenueLocation } from "@/components/home/venue-location";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
+import Gallery from "#/components/home/gallery";
 
 const initialForm: FormState = {
   name: "",
@@ -160,9 +161,11 @@ function Home() {
 
         <Schedule settings={settings} />
 
+        <Gallery settings={settings} />
+
         <section
           id="rsvp"
-          className="scroll-mt-24 px-4 py-14 sm:py-16"
+          className="scroll-mt-24 px-4 py-8 sm:py-12"
         >
           
           <div className="text-center">
@@ -173,7 +176,7 @@ function Home() {
                         <h2 className="mt-2 font-serif text-4xl tracking-tight sm:text-5xl">
                         RSVP & Contributions
                         </h2>
-                          <div className="mt-3 mb-8">
+                          <div className="mt-3 mb-4">
                           <SectionDivider />
                           </div>
                       </div>

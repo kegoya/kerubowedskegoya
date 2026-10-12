@@ -19,6 +19,19 @@ export const scheduleItemSchema = z.object({
 	icon: z.enum(["church", "food"]),
 });
 
+export const galleryItemSchema = z.object({
+	name: z.string().trim().max(80, "Photo name is too long").default(""),
+	image: z.string().max(1000).default(""),
+	alt: z.string().trim().max(200, "Alt text is too long").default(""),
+});
+
+export const gallerySchema = z.object({
+	featured: galleryItemSchema,
+	items: z.array(galleryItemSchema).max(12, "Up to 12 photos").default([]),
+});
+
+export type GalleryItem = z.infer<typeof galleryItemSchema>;
+
 export const venueSchema = z.object({
 	name: z.string().trim().min(1, "Venue name is required").max(120),
 	address: z.string().trim().min(1, "Venue address is required").max(200),
@@ -53,6 +66,7 @@ export const siteSettingsSchema = z.object({
 		.array(scheduleItemSchema)
 		.min(1, "Add at least one event")
 		.max(10),
+	gallery: gallerySchema,
 });
 
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
@@ -112,6 +126,35 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
 			icon: "food",
 		},
 	],
+	gallery: {
+		featured: {
+			name: "Bride & Bridegroom",
+			image: "/images/gallery/couple-1.jpg",
+			alt: "The bride and bridegroom together",
+		},
+		items: [
+			{
+				name: "Best Couple",
+				image: "/images/gallery/couple-2.jpg",
+				alt: "The couple dressed elegantly",
+			},
+			{
+				name: "Cellin Nyaboke",
+				image: "/images/gallery/couple-3.jpg",
+				alt: "Portrait of Cellin Nyaboke",
+			},
+			{
+				name: "Mwalimu Ochenge",
+				image: "/images/gallery/couple-4.jpg",
+				alt: "Portrait of Mwalimu Ochenge",
+			},
+			{
+				name: "Our Memories",
+				image: "/images/gallery/couple-5.jpg",
+				alt: "A special wedding memory",
+			},
+		],
+	},
 };
 
 export const getSiteSettings = createServerFn({ method: "GET" }).handler(

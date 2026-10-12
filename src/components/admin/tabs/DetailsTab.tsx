@@ -5,7 +5,7 @@ import { Label } from "#/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "#/components/ui/select";
 import { Textarea } from "#/components/ui/textarea";
 import { getSiteSettings, updateSiteSettings, type SiteSettings } from "#/server/site";
-import { CheckCircle2, Loader2, MapPin, MessageCircle, Palette, PartyPopper, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Images, Loader2, MapPin, MessageCircle, Palette, PartyPopper, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { DEFAULT_PRIMARY_HEX, DEFAULT_SECONDARY_HEX, toDateTimeLocal } from "../shared/admin-utils";
@@ -118,6 +118,88 @@ function removeItem(index: number) {
       schedule: previous.schedule.filter(
         (_, itemIndex) => itemIndex !== index,
       ),
+    };
+  });
+
+  setStatus("idle");
+  setError(null);
+}
+
+type GalleryItem = SiteSettings["gallery"]["items"][number];
+type GalleryField = keyof GalleryItem;
+
+function updateFeatured<K extends GalleryField>(
+  field: K,
+  value: GalleryItem[K],
+) {
+  setForm((previous) => {
+    if (!previous) return previous;
+
+    return {
+      ...previous,
+      gallery: {
+        ...previous.gallery,
+        featured: { ...previous.gallery.featured, [field]: value },
+      },
+    };
+  });
+
+  setStatus("idle");
+  setError(null);
+}
+
+function updateGalleryItem<K extends GalleryField>(
+  index: number,
+  field: K,
+  value: GalleryItem[K],
+) {
+  setForm((previous) => {
+    if (!previous) return previous;
+
+    return {
+      ...previous,
+      gallery: {
+        ...previous.gallery,
+        items: previous.gallery.items.map((item, itemIndex) =>
+          itemIndex === index ? { ...item, [field]: value } : item,
+        ),
+      },
+    };
+  });
+
+  setStatus("idle");
+  setError(null);
+}
+
+function addGalleryItem() {
+  setForm((previous) => {
+    if (!previous || previous.gallery.items.length >= 12) return previous;
+
+    return {
+      ...previous,
+      gallery: {
+        ...previous.gallery,
+        items: [...previous.gallery.items, { name: "", image: "", alt: "" }],
+      },
+    };
+  });
+
+  setStatus("idle");
+  setError(null);
+}
+
+function removeGalleryItem(index: number) {
+  setForm((previous) => {
+    if (!previous) return previous;
+
+    return {
+      ...previous,
+      gallery: {
+        ...previous.gallery,
+        items: previous.gallery.items.filter(
+          (_, itemIndex) => itemIndex !== index,
+        ),
+      },
     };
   });
 
@@ -488,6 +570,131 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 							>
 								<Trash2 />
 								Remove Event
+							</Button>
+						</div>
+					))}
+				</CardContent>
+			</Card>
+
+			<Card className="mt-6">
+				<CardContent className="grid gap-6">
+					<div className="flex items-center justify-between">
+						<div>
+							<h2 className="flex items-center gap-2 text-lg font-semibold">
+								<Images className="size-5 text-secondary" />
+								Gallery
+							</h2>
+							<p className="mt-1 text-sm text-muted-foreground">
+								Photos, names and captions shown in the gallery section.
+							</p>
+						</div>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={addGalleryItem}
+							disabled={form.gallery.items.length >= 12}
+						>
+							<Plus />
+							Add Photo
+						</Button>
+					</div>
+
+					<div className="grid gap-4 rounded-xl border border-border bg-muted/50 p-4">
+						<p className="text-sm font-semibold">Featured Photo</p>
+						<div className="grid gap-4 sm:grid-cols-2">
+							<div className="grid gap-2">
+								<Label htmlFor="gallery-featured-name">Photo Name</Label>
+								<Input
+									id="gallery-featured-name"
+									placeholder="Bride &amp; Bridegroom"
+									value={form.gallery.featured.name}
+									onChange={(event) =>
+										updateFeatured("name", event.target.value)
+									}
+								/>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="gallery-featured-alt">Alt Text</Label>
+								<Input
+									id="gallery-featured-alt"
+									placeholder="Describe the photo for accessibility"
+									value={form.gallery.featured.alt}
+									onChange={(event) =>
+										updateFeatured("alt", event.target.value)
+									}
+								/>
+							</div>
+							<div className="grid gap-4 sm:col-span-2">
+								<ImagePicker
+									fieldLabel="Featured Image"
+									value={form.gallery.featured.image}
+									fallback=""
+									hint="PNG, JPG, WebP or SVG up to 5 MB — the large photo at the top of the gallery."
+									onValue={(url) => updateFeatured("image", url)}
+								/>
+							</div>
+						</div>
+					</div>
+
+					{form.gallery.items.length === 0 && (
+						<p className="text-sm text-muted-foreground">
+							No photos yet. Use “Add Photo” to build the gallery grid.
+						</p>
+					)}
+
+					{form.gallery.items.map((item, index) => (
+						<div
+							// biome-ignore lint/suspicious/noArrayIndexKey: rows are appended/removed only, inputs are fully controlled
+							key={index}
+							className="grid gap-4 rounded-xl border border-border bg-muted/50 p-4"
+						>
+							<p className="text-sm font-semibold">Photo {index + 1}</p>
+							<div className="grid gap-4 sm:grid-cols-2">
+								<div className="grid gap-2">
+									<Label htmlFor={`gallery-${index}-name`}>Photo Name</Label>
+									<Input
+										id={`gallery-${index}-name`}
+										placeholder="Best Couple"
+										value={item.name}
+										onChange={(event) =>
+											updateGalleryItem(index, "name", event.target.value)
+										}
+									/>
+								</div>
+								<div className="grid gap-2">
+									<Label htmlFor={`gallery-${index}-alt`}>Alt Text</Label>
+									<Input
+										id={`gallery-${index}-alt`}
+										placeholder="Describe the photo for accessibility"
+										value={item.alt}
+										onChange={(event) =>
+											updateGalleryItem(index, "alt", event.target.value)
+										}
+									/>
+								</div>
+								<div className="grid gap-4 sm:col-span-2">
+									<ImagePicker
+										fieldLabel="Photo"
+										value={item.image}
+										fallback=""
+										hint="PNG, JPG, WebP or SVG up to 5 MB."
+										cropAspect={3 / 3.5}
+										onValue={(url) =>
+											updateGalleryItem(index, "image", url)
+										}
+									/>
+								</div>
+							</div>
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								className="justify-self-start text-destructive"
+								onClick={() => removeGalleryItem(index)}
+							>
+								<Trash2 />
+								Remove Photo
 							</Button>
 						</div>
 					))}

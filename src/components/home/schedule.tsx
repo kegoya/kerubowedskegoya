@@ -30,7 +30,7 @@ export function Schedule({ settings }: HomeSectionProps) {
         return (
           <section
             id="programme"
-            className="mx-auto max-w-6xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-16"
+            className="mx-auto max-w-6xl scroll-mt-12 px-4 py-8 sm:px-6 sm:py-12"
           >
             <div className=" text-center">
               
@@ -51,7 +51,7 @@ export function Schedule({ settings }: HomeSectionProps) {
             
       {/* Desktop: alternating cards around a centered timeline.
           Mobile: cards stack on the right of a left-side timeline. */}
-      <div className="relative mt-10 md:mt-14">
+      <div className="relative mt-5 md:mt-7">
         {/* Timeline */}
         <div
           aria-hidden="true"
@@ -122,7 +122,7 @@ export function Schedule({ settings }: HomeSectionProps) {
       </div>
       
       
-            <div className="mt-8 flex items-start justify-center gap-2 text-center text-sm text-muted-foreground sm:mt-10">
+            <div className="mt-4 flex items-start justify-center gap-2 text-center text-sm text-muted-foreground sm:mt-5">
               <PartyPopper className="mt-0.5 size-4 shrink-0 text-[#C6A45C]" />
               <p>
                 {settings.schedule[0]?.label ?? "Celebrations"} start at{" "}

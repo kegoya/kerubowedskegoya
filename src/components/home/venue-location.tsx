@@ -67,7 +67,7 @@ export function VenueLocation({
   return (
     <section
       id="venue"
-      className="bg-background px-4 py-14 text-foreground sm:px-6 sm:py-20"
+      className="bg-background px-4 py-8 text-foreground sm:px-6 sm:py-12"
     >
       <div className="mx-auto max-w-6xl">
         {/* Section heading */}
@@ -96,7 +96,7 @@ export function VenueLocation({
         </header>
 
         {/* Wedding date and contact */}
-        <div className="mx-auto mt-8 grid max-w-3xl gap-3 sm:grid-cols-2">
+        <div className="mx-auto mt-4 grid max-w-3xl gap-3 sm:grid-cols-2">
           <div className="flex min-w-0 items-center gap-4 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
             <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
               <CalendarDays aria-hidden="true" className="size-5" />
@@ -133,7 +133,7 @@ export function VenueLocation({
         </div>
 
         {/* Map */}
-        <div className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lg sm:mt-10">
+        <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-lg sm:mt-5">
           <iframe
             title="Map of the wedding ceremony area in Kisii"
             src={mapUrl}
@@ -149,7 +149,7 @@ export function VenueLocation({
         </p>
 
         {/* Venue cards */}
-        <div className="mt-6 grid gap-5 md:grid-cols-2">
+        <div className="mt-3 grid gap-5 md:grid-cols-2">
           {venues.map((venue) => (
             <article
               key={venue.number}

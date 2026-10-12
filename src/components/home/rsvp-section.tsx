@@ -49,7 +49,7 @@ export function RsvpSection({
 	return (
 		<section
 			aria-labelledby="rsvp-title"
-			className="flex h-full w-full min-w-0 flex-col rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm sm:p-6"
+			className="flex h-full w-full min-w-0 flex-col rounded-2xl border border-border bg-card p-2 text-card-foreground shadow-sm sm:p-6"
 		>
 			<div className="flex items-center gap-2">
 				<ClipboardCheck
