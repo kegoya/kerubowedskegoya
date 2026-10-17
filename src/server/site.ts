@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeader } from "@tanstack/react-start/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -220,6 +221,8 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
 
 export const getSiteSettings = createServerFn({ method: "GET" }).handler(
 	async () => {
+		setResponseHeader("Cache-Control", "no-store");
+
 		const row = await db
 			.select({ value: settings.value })
 			.from(settings)

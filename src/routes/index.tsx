@@ -23,6 +23,7 @@ import { parseFieldErrors } from "@/components/home/validation";
 import { VenueLocation } from "@/components/home/venue-location";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
+import { useSiteSettings } from "#/hooks/use-site-settings";
 import Gallery from "#/components/home/gallery";
 import DeveloperPromoCard from "#/components/developer-promocard";
 
@@ -79,7 +80,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const { settings } = Route.useLoaderData();
+  const loaderData = Route.useLoaderData();
+  const { data } = useSiteSettings(loaderData.settings);
+  const settings = data ?? loaderData.settings;
 
   const [form, setForm] = useState<FormState>(initialForm);
   const [status, setStatus] = useState<
