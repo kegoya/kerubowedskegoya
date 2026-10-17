@@ -64,6 +64,13 @@ export const developerSchema = z.object({
 			"Digital Solutions",
 		]),
 	whatsappNumber: z.string().trim().max(40).default("+254 728 258 654"),
+	whatsappMessage: z
+		.string()
+		.trim()
+		.max(500)
+		.default(
+			"Hello! I saw your promotional card on a wedding website and would like to enquire about your services.",
+		),
 	note: z
 		.string()
 		.trim()
@@ -87,6 +94,8 @@ export const DEFAULT_DEVELOPER: DeveloperSettings = {
 		"Digital Solutions",
 	],
 	whatsappNumber: "+254 728 258 654",
+	whatsappMessage:
+		"Hello! I saw your promotional card on a wedding website and would like to enquire about your services.",
 	note: "Let's build something great together.",
 };
 

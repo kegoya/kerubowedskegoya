@@ -11,9 +11,7 @@ export default function DeveloperPromoCard({
 }: DeveloperPromoCardProps) {
   const whatsappLink =
     `https://wa.me/${settings.whatsappNumber.replace(/\D/g, "")}?text=` +
-    encodeURIComponent(
-      "Hello! I saw your promotional card on a wedding website and would like to enquire about your services.",
-    );
+    encodeURIComponent(settings.whatsappMessage);
 
   return (
     <section

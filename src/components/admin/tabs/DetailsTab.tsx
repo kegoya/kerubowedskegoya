@@ -7,9 +7,10 @@ import { Slider } from "#/components/ui/slider";
 import { Switch } from "#/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import { Textarea } from "#/components/ui/textarea";
+import { useIsMobile } from "#/hooks/use-mobile";
 import { getSiteSettings, updateSiteSettings, type SiteSettings } from "#/server/site";
 import { CheckCircle2, Code2, Images, Loader2, MapPin, MessageCircle, Palette, PartyPopper, Plus, Trash2 } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { DEFAULT_PRIMARY_HEX, DEFAULT_SECONDARY_HEX, toDateTimeLocal } from "../shared/admin-utils";
 import ColorPicker from "../settings/ColorPicker";
@@ -28,6 +29,8 @@ type DetailTabValue = (typeof DETAIL_TABS)[number]["value"];
 
 export default function DetailsTab() {
 	const [tab, setTab] = useState<DetailTabValue>("wedding");
+	const isMobile = useIsMobile();
+	const touchStart = useRef<{ x: number; y: number } | null>(null);
 	const [form, setForm] = useState<SiteSettings | null>(null);
 	const [status, setStatus] = useState<
 		"idle" | "loading" | "saving" | "success" | "error"
@@ -376,6 +379,43 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
   }
 }
 
+function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+	const touch = event.touches[0];
+	if (!touch) return;
+
+	const target = event.target as HTMLElement | null;
+	if (target?.closest("input, textarea, select, [role='slider']")) {
+		touchStart.current = null;
+		return;
+	}
+
+	touchStart.current = { x: touch.clientX, y: touch.clientY };
+}
+
+function handleTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+	const start = touchStart.current;
+	touchStart.current = null;
+	if (!start) return;
+
+	const touch = event.changedTouches[0];
+	if (!touch) return;
+
+	const deltaX = touch.clientX - start.x;
+	const deltaY = touch.clientY - start.y;
+
+	if (Math.abs(deltaX) < 60 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+	const index = DETAIL_TABS.findIndex((item) => item.value === tab);
+
+	if (deltaX < 0) {
+		const next = DETAIL_TABS[index + 1];
+		if (next) setTab(next.value);
+	} else {
+		const previous = DETAIL_TABS[index - 1];
+		if (previous) setTab(previous.value);
+	}
+}
+
 	return (
 		<form onSubmit={handleSubmit}>
 			<Tabs
@@ -397,14 +437,19 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 					</TabsList>
 				</div>
 
-				<TabsContent value="wedding">
-					<Card className="mt-6">
-						<CardContent className="grid gap-6">
-							<div>
-								<h2 className="flex items-center gap-2 text-lg font-semibold">
-									<Palette className="size-5 text-secondary" />
-									Wedding Details
-								</h2>
+				<div
+					className="touch-pan-y"
+					onTouchStart={isMobile ? handleTouchStart : undefined}
+					onTouchEnd={isMobile ? handleTouchEnd : undefined}
+				>
+					<TabsContent value="wedding">
+						<Card className="mt-6">
+							<CardContent className="grid gap-6">
+								<div>
+									<h2 className="flex items-center gap-2 text-lg font-semibold">
+										<Palette className="size-5 text-secondary" />
+										Wedding Details
+									</h2>
 						<p className="mt-1 text-sm text-muted-foreground">
 							Customize what your guests see on the invitation.
 						</p>
@@ -1071,6 +1116,23 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 								}
 							/>
 						</div>
+						<div className="grid gap-2 sm:col-span-2">
+							<Label htmlFor="details-developer-whatsappMessage">
+								WhatsApp Message
+							</Label>
+							<Textarea
+								id="details-developer-whatsappMessage"
+								rows={3}
+								placeholder="Hello! I saw your promotional card…"
+								value={form.developer.whatsappMessage}
+								onChange={(event) =>
+									updateDeveloper("whatsappMessage", event.target.value)
+								}
+							/>
+							<p className="text-xs text-muted-foreground">
+								Pre-filled message when a guest taps “Chat on WhatsApp”.
+							</p>
+						</div>
 					</div>
 
 					<div className="grid gap-4 rounded-xl border border-border bg-muted/50 p-4">
@@ -1124,6 +1186,7 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 				</CardContent>
 			</Card>
 				</TabsContent>
+				</div>
 			</Tabs>
 
 			{error && (
