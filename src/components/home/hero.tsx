@@ -13,6 +13,8 @@ export function Hero({
 }: HeroProps) {
     const heroImage =
         settings.heroImage || DEFAULT_SITE_SETTINGS.heroImage;
+    const heroImageOpacity =
+        settings.heroImageOpacity ?? DEFAULT_SITE_SETTINGS.heroImageOpacity;
 
     return (
         <section className="relative isolate flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#0b1023] px-5 py-16 text-center sm:px-8 sm:py-20">
@@ -29,7 +31,7 @@ export function Hero({
                 src={heroImage}
                 alt=""
                 aria-hidden="true"
-                
+                style={{ opacity: heroImageOpacity / 100 }}
 className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-[center_30%] sm:object-[center_20%] lg:object-[center_8%]"
 
             />

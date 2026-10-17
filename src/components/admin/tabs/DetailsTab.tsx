@@ -3,16 +3,31 @@ import { Card, CardContent } from "#/components/ui/card";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "#/components/ui/select";
+import { Slider } from "#/components/ui/slider";
+import { Switch } from "#/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import { Textarea } from "#/components/ui/textarea";
 import { getSiteSettings, updateSiteSettings, type SiteSettings } from "#/server/site";
-import { CheckCircle2, Images, Loader2, MapPin, MessageCircle, Palette, PartyPopper, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Code2, Images, Loader2, MapPin, MessageCircle, Palette, PartyPopper, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { DEFAULT_PRIMARY_HEX, DEFAULT_SECONDARY_HEX, toDateTimeLocal } from "../shared/admin-utils";
 import ColorPicker from "../settings/ColorPicker";
 import ImagePicker from "../settings/ImagePicker";
 
+const DETAIL_TABS = [
+	{ value: "wedding", label: "Wedding Details", icon: Palette },
+	{ value: "programme", label: "Programme", icon: PartyPopper },
+	{ value: "gallery", label: "Gallery", icon: Images },
+	{ value: "venue", label: "Venue & Location", icon: MapPin },
+	{ value: "contact", label: "Contact & Gifts", icon: MessageCircle },
+	{ value: "developer", label: "Developer Card", icon: Code2 },
+] as const;
+
+type DetailTabValue = (typeof DETAIL_TABS)[number]["value"];
+
 export default function DetailsTab() {
+	const [tab, setTab] = useState<DetailTabValue>("wedding");
 	const [form, setForm] = useState<SiteSettings | null>(null);
 	const [status, setStatus] = useState<
 		"idle" | "loading" | "saving" | "success" | "error"
@@ -228,6 +243,78 @@ function updateVenue(
   setError(null);
 }
 
+type DeveloperSettings = SiteSettings["developer"];
+type DeveloperField = keyof DeveloperSettings;
+
+function updateDeveloper<K extends DeveloperField>(
+  field: K,
+  value: DeveloperSettings[K],
+) {
+  setForm((previous) =>
+    previous
+      ? { ...previous, developer: { ...previous.developer, [field]: value } }
+      : previous,
+  );
+
+  setStatus("idle");
+  setError(null);
+}
+
+function updateService(index: number, value: string) {
+  setForm((previous) => {
+    if (!previous) return previous;
+
+    return {
+      ...previous,
+      developer: {
+        ...previous.developer,
+        services: previous.developer.services.map((service, serviceIndex) =>
+          serviceIndex === index ? value : service,
+        ),
+      },
+    };
+  });
+
+  setStatus("idle");
+  setError(null);
+}
+
+function addService() {
+  setForm((previous) => {
+    if (!previous || previous.developer.services.length >= 8) return previous;
+
+    return {
+      ...previous,
+      developer: {
+        ...previous.developer,
+        services: [...previous.developer.services, ""],
+      },
+    };
+  });
+
+  setStatus("idle");
+  setError(null);
+}
+
+function removeService(index: number) {
+  setForm((previous) => {
+    if (!previous) return previous;
+
+    return {
+      ...previous,
+      developer: {
+        ...previous.developer,
+        services: previous.developer.services.filter(
+          (_, serviceIndex) => serviceIndex !== index,
+        ),
+      },
+    };
+  });
+
+  setStatus("idle");
+  setError(null);
+}
+
 async function handleSubmit(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
 
@@ -263,8 +350,18 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
   setStatus("saving");
   setError(null);
 
+  const payload: SiteSettings = {
+    ...form,
+    developer: {
+      ...form.developer,
+      services: form.developer.services
+        .map((service) => service.trim())
+        .filter(Boolean),
+    },
+  };
+
   try {
-    const result = await updateSiteSettings({ data: form });
+    const result = await updateSiteSettings({ data: payload });
     setForm(result.settings);
     setStatus("success");
     toast.success("Wedding details saved.");
@@ -281,13 +378,33 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 
 	return (
 		<form onSubmit={handleSubmit}>
-			<Card className="mt-6">
-				<CardContent className="grid gap-6">
-					<div>
-						<h2 className="flex items-center gap-2 text-lg font-semibold">
-							<Palette className="size-5 text-secondary" />
-							Wedding Details
-						</h2>
+			<Tabs
+				value={tab}
+				onValueChange={(value) => setTab(value as DetailTabValue)}
+			>
+				<div className="sticky top-14 z-20 -mx-4 border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6">
+					<TabsList className="w-full snap-x flex-nowrap justify-start gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-x-visible">
+						{DETAIL_TABS.map(({ value, label, icon: Icon }) => (
+							<TabsTrigger
+								key={value}
+								value={value}
+								className="h-8 flex-none snap-start gap-2 px-3"
+							>
+								<Icon className="size-4" />
+								{label}
+							</TabsTrigger>
+						))}
+					</TabsList>
+				</div>
+
+				<TabsContent value="wedding">
+					<Card className="mt-6">
+						<CardContent className="grid gap-6">
+							<div>
+								<h2 className="flex items-center gap-2 text-lg font-semibold">
+									<Palette className="size-5 text-secondary" />
+									Wedding Details
+								</h2>
 						<p className="mt-1 text-sm text-muted-foreground">
 							Customize what your guests see on the invitation.
 						</p>
@@ -369,6 +486,30 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 								hint="PNG, JPG, WebP or SVG up to 5 MB — the invitation photo shown at the top."
 								onValue={(url) => update("heroImage", url)}
 							/>
+
+							<div className="grid gap-3 rounded-xl border border-border bg-muted/50 p-4">
+								<div className="flex items-center justify-between">
+									<Label htmlFor="details-heroImageOpacity">
+										Hero Image Opacity
+									</Label>
+									<span className="text-sm font-medium text-muted-foreground">
+										{form.heroImageOpacity}%
+									</span>
+								</div>
+								<Slider
+									id="details-heroImageOpacity"
+									min={0}
+									max={100}
+									step={5}
+									value={[form.heroImageOpacity]}
+									onValueChange={(value) =>
+										update("heroImageOpacity", value[0] ?? 80)
+									}
+								/>
+								<p className="text-xs text-muted-foreground">
+									Lower values fade the hero photo into the background.
+								</p>
+							</div>
 						</div>
 						<div className="grid gap-4 sm:col-span-2">
 							<ImagePicker
@@ -447,15 +588,17 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 					</div>
 				</CardContent>
 			</Card>
+				</TabsContent>
 
-			<Card className="mt-6">
-				<CardContent className="grid gap-6">
-					<div className="flex items-center justify-between">
-						<div>
-							<h2 className="flex items-center gap-2 text-lg font-semibold">
-								<PartyPopper className="size-5 text-secondary" />
-								Programme / Schedule
-							</h2>
+				<TabsContent value="programme">
+					<Card className="mt-6">
+						<CardContent className="grid gap-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<h2 className="flex items-center gap-2 text-lg font-semibold">
+										<PartyPopper className="size-5 text-secondary" />
+										Programme / Schedule
+									</h2>
 							<p className="mt-1 text-sm text-muted-foreground">
 								Ceremony and reception events shown on the invitation.
 							</p>
@@ -575,15 +718,17 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 					))}
 				</CardContent>
 			</Card>
+				</TabsContent>
 
-			<Card className="mt-6">
-				<CardContent className="grid gap-6">
-					<div className="flex items-center justify-between">
-						<div>
-							<h2 className="flex items-center gap-2 text-lg font-semibold">
-								<Images className="size-5 text-secondary" />
-								Gallery
-							</h2>
+				<TabsContent value="gallery">
+					<Card className="mt-6">
+						<CardContent className="grid gap-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<h2 className="flex items-center gap-2 text-lg font-semibold">
+										<Images className="size-5 text-secondary" />
+										Gallery
+									</h2>
 							<p className="mt-1 text-sm text-muted-foreground">
 								Photos, names and captions shown in the gallery section.
 							</p>
@@ -700,14 +845,16 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 					))}
 				</CardContent>
 			</Card>
+				</TabsContent>
 
-			<Card className="mt-6">
-				<CardContent className="grid gap-6">
-					<div>
-						<h2 className="flex items-center gap-2 text-lg font-semibold">
-							<MapPin className="size-5 text-secondary" />
-							Venue &amp; Location
-						</h2>
+				<TabsContent value="venue">
+					<Card className="mt-6">
+						<CardContent className="grid gap-6">
+							<div>
+								<h2 className="flex items-center gap-2 text-lg font-semibold">
+									<MapPin className="size-5 text-secondary" />
+									Venue &amp; Location
+								</h2>
 						<p className="mt-1 text-sm text-muted-foreground">
 							The ceremony and reception venues shown on the Find Us map.
 						</p>
@@ -769,13 +916,15 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 					))}
 				</CardContent>
 			</Card>
+				</TabsContent>
 
-			<Card className="mt-6">
-				<CardContent className="grid gap-6">
-					<div>
-						<h2 className="flex items-center gap-2 text-lg font-semibold">
-							<MessageCircle className="size-5 text-secondary" />
-							WhatsApp, Contact &amp; Gifts
+				<TabsContent value="contact">
+					<Card className="mt-6">
+						<CardContent className="grid gap-6">
+							<div>
+								<h2 className="flex items-center gap-2 text-lg font-semibold">
+									<MessageCircle className="size-5 text-secondary" />
+									WhatsApp, Contact &amp; Gifts
 						</h2>
 						<p className="mt-1 text-sm text-muted-foreground">
 							The WhatsApp button and contact and gift numbers shown on the
@@ -825,12 +974,157 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 								}
 							/>
 							<p className="text-xs text-muted-foreground">
-								M-PESA number shown on the Gift Contribution card.
+								M-PESA number shown on the Gift Donation card.
 							</p>
 						</div>
 					</div>
 				</CardContent>
 			</Card>
+				</TabsContent>
+
+				<TabsContent value="developer">
+					<Card className="mt-6">
+						<CardContent className="grid gap-6">
+							<div className="flex items-start justify-between gap-4">
+								<div>
+									<h2 className="flex items-center gap-2 text-lg font-semibold">
+										<Code2 className="size-5 text-secondary" />
+										Developer Card
+									</h2>
+							<p className="mt-1 text-sm text-muted-foreground">
+								The developer credit card shown near the bottom of the
+								invitation.
+							</p>
+						</div>
+						<label
+							htmlFor="details-developer-enabled"
+							className="flex items-center gap-2 text-sm font-medium"
+						>
+							<span className="text-muted-foreground">Show card</span>
+							<Switch
+								id="details-developer-enabled"
+								checked={form.developer.enabled}
+								onCheckedChange={(checked) =>
+									updateDeveloper("enabled", checked)
+								}
+							/>
+						</label>
+					</div>
+
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="grid gap-2">
+							<Label htmlFor="details-developer-name">Business Name</Label>
+							<Input
+								id="details-developer-name"
+								value={form.developer.name}
+								onChange={(event) =>
+									updateDeveloper("name", event.target.value)
+								}
+							/>
+						</div>
+						<div className="grid gap-2">
+							<Label htmlFor="details-developer-tagline">Tagline</Label>
+							<Input
+								id="details-developer-tagline"
+								value={form.developer.tagline}
+								onChange={(event) =>
+									updateDeveloper("tagline", event.target.value)
+								}
+							/>
+						</div>
+						<div className="grid gap-2 sm:col-span-2">
+							<Label htmlFor="details-developer-description">
+								Description
+							</Label>
+							<Textarea
+								id="details-developer-description"
+								rows={2}
+								value={form.developer.description}
+								onChange={(event) =>
+									updateDeveloper("description", event.target.value)
+								}
+							/>
+						</div>
+						<div className="grid gap-2">
+							<Label htmlFor="details-developer-whatsappNumber">
+								WhatsApp Number
+							</Label>
+							<Input
+								id="details-developer-whatsappNumber"
+								placeholder="+254 712 345 678"
+								value={form.developer.whatsappNumber}
+								onChange={(event) =>
+									updateDeveloper("whatsappNumber", event.target.value)
+								}
+							/>
+							<p className="text-xs text-muted-foreground">
+								Used for the “Chat on WhatsApp” button.
+							</p>
+						</div>
+						<div className="grid gap-2">
+							<Label htmlFor="details-developer-note">Footer Note</Label>
+							<Input
+								id="details-developer-note"
+								value={form.developer.note}
+								onChange={(event) =>
+									updateDeveloper("note", event.target.value)
+								}
+							/>
+						</div>
+					</div>
+
+					<div className="grid gap-4 rounded-xl border border-border bg-muted/50 p-4">
+						<div className="flex items-center justify-between">
+							<p className="text-sm font-semibold">Services</p>
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={addService}
+								disabled={form.developer.services.length >= 8}
+							>
+								<Plus />
+								Add Service
+							</Button>
+						</div>
+
+						{form.developer.services.length === 0 && (
+							<p className="text-sm text-muted-foreground">
+								No services yet. Use “Add Service” to list what you offer.
+							</p>
+						)}
+
+						{form.developer.services.map((service, index) => (
+							<div
+								// biome-ignore lint/suspicious/noArrayIndexKey: rows are appended/removed only, inputs are fully controlled
+								key={index}
+								className="flex items-center gap-2"
+							>
+								<Input
+									aria-label={`Service ${index + 1}`}
+									placeholder="e.g. Wedding Websites"
+									value={service}
+									onChange={(event) =>
+										updateService(index, event.target.value)
+									}
+								/>
+								<Button
+									type="button"
+									variant="outline"
+									size="icon"
+									className="shrink-0 text-destructive"
+									aria-label={`Remove service ${index + 1}`}
+									onClick={() => removeService(index)}
+								>
+									<Trash2 />
+								</Button>
+							</div>
+						))}
+					</div>
+				</CardContent>
+			</Card>
+				</TabsContent>
+			</Tabs>
 
 			{error && (
 				<p role="alert" className="mt-4 text-sm text-destructive">
@@ -838,8 +1132,8 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 				</p>
 			)}
 
-			<div className="mt-6 flex items-center gap-4">
-				<Button type="submit" size="lg" disabled={status === "saving"}>
+			<div className="fixed inset-x-0 bottom-16 z-30 flex items-center gap-4 border-t border-border bg-background/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur supports-[backdrop-filter]:bg-background/60 md:sticky md:inset-x-auto md:bottom-0 md:z-10 md:-mx-6 md:mt-6 md:px-6 md:shadow-none">
+				<Button type="submit" size="lg" className="flex-1 md:flex-none" disabled={status === "saving"}>
 					{status === "saving" ? (
 						<>
 							<Loader2 className="animate-spin" />
@@ -856,6 +1150,9 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 					</span>
 				)}
 			</div>
+
+			{/* Reserves space for the fixed mobile save bar so content isn't hidden */}
+			<div aria-hidden="true" className="h-14 md:hidden" />
 		</form>
 	);
 }

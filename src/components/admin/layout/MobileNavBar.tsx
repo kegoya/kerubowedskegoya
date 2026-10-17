@@ -12,8 +12,8 @@ export default function MobileNavBar({
 	onLogout: () => void;
 }) {
 	return (
-		<nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
-			<ul className="mx-auto flex max-w-md items-stretch justify-around gap-1 px-2 py-1.5">
+		<nav className="fixed inset-x-0 bottom-0 z-40 h-16 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
+			<ul className="mx-auto flex h-full max-w-md items-center justify-around gap-1 px-2">
 				{navItems.map(({ id, label, icon: Icon }) => {
 					const active = tab === id;
 					return (

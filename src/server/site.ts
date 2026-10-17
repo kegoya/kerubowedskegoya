@@ -42,6 +42,54 @@ export const venueSchema = z.object({
 
 export type Venue = z.infer<typeof venueSchema>;
 
+export const developerSchema = z.object({
+	enabled: z.boolean().default(true),
+	name: z.string().trim().max(80).default("Kegz Info Solutions"),
+	tagline: z.string().trim().max(120).default("Your Branding & Digital Partner"),
+	description: z
+		.string()
+		.trim()
+		.max(400)
+		.default(
+			"Need a beautiful website for your wedding, business, or special event? We create digital experiences that bring your ideas to life.",
+		),
+	services: z
+		.array(z.string().trim().min(1).max(60))
+		.max(8)
+		.default([
+			"Business Websites",
+			"Wedding Websites",
+			"Branding & Design",
+			"Printing & Marketing",
+			"Digital Solutions",
+		]),
+	whatsappNumber: z.string().trim().max(40).default("+254 728 258 654"),
+	note: z
+		.string()
+		.trim()
+		.max(160)
+		.default("Let's build something great together."),
+});
+
+export type DeveloperSettings = z.infer<typeof developerSchema>;
+
+export const DEFAULT_DEVELOPER: DeveloperSettings = {
+	enabled: true,
+	name: "Kegz Info Solutions",
+	tagline: "Your Branding & Digital Partner",
+	description:
+		"Need a beautiful website for your wedding, business, or special event? We create digital experiences that bring your ideas to life.",
+	services: [
+		"Business Websites",
+		"Wedding Websites",
+		"Branding & Design",
+		"Printing & Marketing",
+		"Digital Solutions",
+	],
+	whatsappNumber: "+254 728 258 654",
+	note: "Let's build something great together.",
+};
+
 export const siteSettingsSchema = z.object({
 	siteTitle: z.string().min(1).max(120),
 	siteDescription: z.string().min(1).max(300),
@@ -58,6 +106,7 @@ export const siteSettingsSchema = z.object({
 	whatsappGroupLink: z.string().trim().max(1000).default(""),
 	giftNumber: z.string().trim().max(40).default(""),
 	heroImage: z.string().max(1000).default(""),
+	heroImageOpacity: z.number().min(0).max(100).default(80),
 	favicon: z.string().max(1000).default(""),
 	rsvpDeadline: z.string().min(1).max(120),
 	primaryColor: z.string().max(50).default(""),
@@ -67,6 +116,7 @@ export const siteSettingsSchema = z.object({
 		.min(1, "Add at least one event")
 		.max(10),
 	gallery: gallerySchema,
+	developer: developerSchema.default(DEFAULT_DEVELOPER),
 });
 
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
@@ -102,6 +152,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
 	whatsappGroupLink: "https://chat.whatsapp.com/YOUR_INVITE_CODE",
 	giftNumber: "0728 258 654",
 	heroImage: "/main.png",
+	heroImageOpacity: 80,
 	favicon: "/icon.png",
 	rsvpDeadline: "December 14, 2026",
 	primaryColor: "",
@@ -126,6 +177,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
 			icon: "food",
 		},
 	],
+	developer: DEFAULT_DEVELOPER,
 	gallery: {
 		featured: {
 			name: "Bride & Bridegroom",

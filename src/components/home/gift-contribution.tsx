@@ -25,7 +25,7 @@ export function GiftContribution({
   const steps = [
     "Go to M-PESA → Send Money",
     `Enter number: ${phoneNumber}`,
-    "Enter your gift or contribution amount",
+    "Enter your gift or donation amount",
     "Confirm and send",
   ];
 
@@ -67,7 +67,7 @@ export function GiftContribution({
           id="gift-contribution-title"
           className="font-serif text-xl"
         >
-          Gift Contribution
+          Gift Donation
         </h3>
       </div>
 

@@ -51,7 +51,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 		],
 		scripts: [
 			{
-				children: `(function(){try{var t=localStorage.getItem("wedding-theme");var a=t?t==="dark":(window.matchMedia("(prefers-color-scheme: dark)").matches);var d=document.documentElement;if(a){d.classList.add("dark")}else{d.classList.add("light")}}catch(e){}})()`,
+				children: `(function(){try{var t=localStorage.getItem("wedding-theme");var a=t==="light"?false:t==="system"?window.matchMedia("(prefers-color-scheme: dark)").matches:true;var d=document.documentElement;if(a){d.classList.add("dark")}else{d.classList.add("light")}}catch(e){}})()`,
 				tag: "script",
 			},
 		],

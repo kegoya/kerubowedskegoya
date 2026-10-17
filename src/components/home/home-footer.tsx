@@ -1,5 +1,5 @@
 
-import { Heart, Phone } from "lucide-react";
+import { CalendarDays, Heart, MapPin, Phone } from "lucide-react";
 import type { HomeSectionProps } from "./types";
 
 export function HomeFooter({ settings }: HomeSectionProps) {
@@ -8,7 +8,7 @@ export function HomeFooter({ settings }: HomeSectionProps) {
     { label: "Programme", href: "#programme" },
     { label: "Venue", href: "#venue" },
     { label: "RSVP", href: "#rsvp" },
-    { label: "Gifts and Contributions", href: "#rsvp" },
+    { label: "Gifts and Donations", href: "#rsvp" },
     { label: "Find Us", href: "#venue" },
   ];
 
@@ -63,8 +63,9 @@ export function HomeFooter({ settings }: HomeSectionProps) {
 
             <div className="mt-4 space-y-5 text-sm">
               <div>
-                <p className="font-semibold text-gold">
-                  {settings.dateLabel || "December, 2026"}
+                <p className="flex items-center gap-2 font-semibold text-gold">
+                  <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
+                  <span>{settings.dateLabel || "December, 2026"}</span>
                 </p>
                 <p className="mt-1 text-muted-foreground">
                   Starting at 10:00 AM
@@ -72,8 +73,12 @@ export function HomeFooter({ settings }: HomeSectionProps) {
               </div>
 
               <div>
-                <p className="font-semibold">
-                  {settings.location || "Kisii, Kenya"}
+                <p className="flex items-center gap-2 font-semibold">
+                  <MapPin
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-gold"
+                  />
+                  <span>{settings.location || "Kisii, Kenya"}</span>
                 </p>
                 <p className="mt-1 text-muted-foreground">
                   Venue details shared on RSVP
@@ -114,12 +119,12 @@ export function HomeFooter({ settings }: HomeSectionProps) {
           <p>
             Developed by{" "}
             <a
-              href="https://wa.me/254712405172"
+              href="https://wa.me/254728258654"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-gold transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              Kegs Info Solutions
+              Kegz Info Solutions
             </a>
           </p>
         </div>

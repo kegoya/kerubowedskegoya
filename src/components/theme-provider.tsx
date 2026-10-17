@@ -13,7 +13,7 @@ const STORAGE_KEY = "wedding-theme";
 
 export function ThemeProvider({
 	children,
-	defaultTheme = "system",
+	defaultTheme = "dark",
 }: {
 	children: React.ReactNode;
 	defaultTheme?: Theme;

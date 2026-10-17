@@ -24,6 +24,7 @@ import { VenueLocation } from "@/components/home/venue-location";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import Gallery from "#/components/home/gallery";
+import DeveloperPromoCard from "#/components/developer-promocard";
 
 const initialForm: FormState = {
   name: "",
@@ -174,7 +175,7 @@ function Home() {
                         </p>
             
                         <h2 className="mt-2 font-serif text-4xl tracking-tight sm:text-5xl">
-                        RSVP & Contributions
+                        RSVP &amp; Donations
                         </h2>
                           <div className="mt-3 mb-4">
                           <SectionDivider />
@@ -219,7 +220,9 @@ function Home() {
           church={settings.church}
           reception={settings.reception}
         />
-
+        {settings.developer.enabled && (
+          <DeveloperPromoCard settings={settings.developer} />
+        )}
 
         <HomeFooter settings={settings} />
 
